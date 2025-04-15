@@ -8,12 +8,6 @@ static int8_t pinDown = 27;
 
 static void setupPins()
 {
-  // allocate pins
-  PinManagerPinType pins[2] = {
-      {pinUp, false},   // input
-      {pinDown, false}, // input
-  };
-  assert(pinManager.allocateMultiplePins(pins, 2, PinOwner::UM_GAMES));
   pinMode(pinUp, INPUT_PULLUP);
   pinMode(pinDown, INPUT_PULLUP);
 }
