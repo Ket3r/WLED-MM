@@ -108,7 +108,7 @@ struct Racket : PongBall {
     else
       y = newY;
   }
-};
+} racket;
 
 
 //effect functions
@@ -119,7 +119,7 @@ uint16_t mode_pongGame(void) {
 
   PongBall* ball = reinterpret_cast<PongBall*>(SEGENV.data);
   PongBall* racket_left = reinterpret_cast<PongBall*>(SEGENV.data + sizeof(pongBall));
-  PongBall* racket_right = reinterpret_cast<PongBall*>(SEGENV.data + 2* sizeof(pongBall));
+  Racket* racket_right = reinterpret_cast<Racket*>(SEGENV.data + 2* sizeof(racket));
 
   // static uint16_t previousX, previousY;
 
