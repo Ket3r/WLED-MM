@@ -67,8 +67,8 @@ typedef struct PongBall {
 
 
 struct Racket : PongBall {
-  int8_t pinUp;
-  int8_t pinDown;
+  int8_t pinUp = 26;
+  int8_t pinDown = 27;
   void move2() {
     bool isMoveNeeded = false;
     bool isDirectionUp = false;
