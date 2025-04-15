@@ -100,7 +100,13 @@ struct Racket : PongBall {
       new_y += 1;
     else
       new_y -= 1;
-    y = new_y;
+    
+    if (new_y <= 0)
+      return; // do nothing
+    else if (new_y + height-1 >= SEGMENT.virtualHeight()-1)
+      return; // do nothing
+    else
+      y = new_y;
   }
 } racket;
 
