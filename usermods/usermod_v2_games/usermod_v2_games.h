@@ -84,6 +84,7 @@ struct Racket : PongBall {
   int8_t pinPoti;
   float poti_min;
   float poti_range;
+  bool is_rotation_inverted;
 
   void moveDigital() {
     float new_y = y;
@@ -119,7 +120,11 @@ struct Racket : PongBall {
 
   void moveAnalog() {
     uint32_t millis = analogReadMilliVolts(pinPoti); // Liest die Spannung des Potentiometers
-    y = (millis - poti_min) / poti_range * (float) max_y;  // Normalisiert den Wert zwischen 0 und 1
+    float tmp = (millis - poti_min) / poti_range * (float) max_y;
+    if (is_rotation_inverted)
+      y = max_y - tmp;
+    else
+      y = tmp;
   }
 } racket;
 
@@ -160,6 +165,7 @@ uint16_t mode_pongGame(void) {
     racket_left->pinPoti = pinPotiLeft;
     racket_left->poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
     racket_left->poti_range = 3100.0 - racket_left->poti_min;
+    racket_left->is_rotation_inverted = true;
 
     racket_right->width = 1;
     racket_right->height = vH/4;
@@ -172,6 +178,7 @@ uint16_t mode_pongGame(void) {
     racket_right->pinPoti = pinPotiRight;
     racket_right->poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
     racket_right->poti_range = 3100.0 - racket_right->poti_min;
+    racket_right->is_rotation_inverted = false;
 
 
     setupPins();
