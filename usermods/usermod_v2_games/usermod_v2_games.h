@@ -83,18 +83,18 @@ struct Racket : PongBall {
     if (!isMoveNeeded)
       return;
 
-    float newY = y;
+    float new_y = y;
     if (isDirectionUp)
-      newY += 1;
+      new_y += 1;
     else
-      newY -= 1;
+      new_y -= 1;
 
-    if (newY <= 0)
+    if (new_y <= 0)
       return; // do nothing
-    else if (newY + height-1 >= SEGMENT.virtualHeight()-1)
+    else if (new_y + height-1 >= SEGMENT.virtualHeight()-1)
       return; // do nothing
     else
-      y = newY;
+      y = new_y;
   }
 } racket;
 
@@ -102,12 +102,12 @@ struct Racket : PongBall {
 //effect functions
 uint16_t mode_pongGame(void) { 
 
-  uint16_t dataSize = 3 * sizeof(pongBall);
+  uint16_t dataSize = 2 * sizeof(pongBall) + sizeof(racket);
   if (!SEGENV.allocateData(dataSize)) {SEGMENT.fill(SEGCOLOR(0)); return 350;} //mode_static(); //allocation failed
 
   PongBall* ball = reinterpret_cast<PongBall*>(SEGENV.data);
   PongBall* racket_left = reinterpret_cast<PongBall*>(SEGENV.data + sizeof(pongBall));
-  PongBall* racket_right = reinterpret_cast<PongBall*>(SEGENV.data + 2* sizeof(pongBall));
+  Racket* racket_right = reinterpret_cast<Racket*>(SEGENV.data + 2* sizeof(racket));
 
   // static uint16_t previousX, previousY;
 
@@ -147,7 +147,7 @@ uint16_t mode_pongGame(void) {
 
   ball->move();
   racket_left->move();
-  racket_right->move();
+  racket_right->move2();
 
 
   if (ball->hit(racket_left)) {
