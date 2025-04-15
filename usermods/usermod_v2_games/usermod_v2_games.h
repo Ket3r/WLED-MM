@@ -25,7 +25,7 @@ typedef struct PongBall {
   float speed;// = 1;
   uint8_t scoreLeft, scoreRight;
   uint32_t color;
-  void move() {
+  virtual void move() {
     x += dir_x * speed;
     y += dir_y * speed;
   }
@@ -76,6 +76,39 @@ typedef struct PongBall {
       return false;
   }
 } pongBall;
+
+
+struct Racket : PongBall {
+  int8_t pinUp;
+  int8_t pinDown;
+  void move() override {
+    bool isMoveNeeded = false;
+    bool isDirectionUp = false;
+    if(HIGH == digitalRead(pinUp)) {
+      isMoveNeeded = true;
+      isDirectionUp = true;
+    } else if (HIGH == digitalRead(pinDown)) {
+      isMoveNeeded = true;
+      isDirectionUp = false;
+    }
+
+    if (!isMoveNeeded)
+      return;
+
+    float newY = y;
+    if (isDirectionUp)
+      newY += 1;
+    else
+      newY -= 1;
+
+    if (newY <= 0)
+      return; // do nothing
+    else if (newY + height-1 >= SEGMENT.virtualHeight()-1)
+      return; // do nothing
+    else
+      y = newY;
+  }
+};
 
 
 //effect functions
@@ -323,6 +356,8 @@ static const char _data_FX_MODE_3DIMUCube[] PROGMEM = "🎮 3DIMUCube ☾@,Persp
 
 class GamesUsermod : public Usermod {
   private:
+    int8_t pinUp      = -1;    // disabled
+    int8_t pinDown   = -1;    // disabled
 
   public:
 
@@ -335,6 +370,12 @@ class GamesUsermod : public Usermod {
         #endif
       #endif
       strip.addEffect(255, &mode_3DIMUCube, _data_FX_MODE_3DIMUCube); //works also without IMU
+      // allocate pins
+      PinManagerPinType pins[4] = {
+        { pinUp, false },  // input
+        { pinDown, false },  // input
+      };
+      assert(pinManager.allocateMultiplePins(pins, 2, PinOwner::UM_GAMES));
     }
 
     void connected() {
