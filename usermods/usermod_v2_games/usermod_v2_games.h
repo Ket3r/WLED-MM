@@ -4,12 +4,15 @@
 
 static int8_t pinUp = 26;
 static int8_t pinDown = 27;
+static int8_t pinPotiRight = 34;
+static int8_t pinPotiLeft = 34;
 
 
 static void setupPins()
 {
   pinMode(pinUp, INPUT_PULLUP);
   pinMode(pinDown, INPUT_PULLUP);
+  analogSetAttenuation(ADC_11db);
 }
 
 //inspired by https://noobtuts.com/cpp/2d-pong-game
@@ -77,7 +80,12 @@ typedef struct PongBall {
 
 
 struct Racket : PongBall {
-  void move2() {
+  uint16_t max_y;
+  int8_t pinPoti;
+  float poti_min;
+  float poti_range;
+
+  void moveDigital() {
     float new_y = y;
     bool isMoveNeeded = false;
     bool isDirectionUp = false;
@@ -108,18 +116,23 @@ struct Racket : PongBall {
     else
       y = new_y;
   }
+
+  void moveAnalog() {
+    uint32_t millis = analogReadMilliVolts(pinPoti); // Liest die Spannung des Potentiometers
+    y = (millis - poti_min) / poti_range * (float) max_y;  // Normalisiert den Wert zwischen 0 und 1
+  }
 } racket;
 
 
 //effect functions
 uint16_t mode_pongGame(void) { 
 
-  uint16_t dataSize = 2 * sizeof(pongBall) + sizeof(racket);
+  uint16_t dataSize = 1 * sizeof(pongBall) + 2 * sizeof(racket);
   if (!SEGENV.allocateData(dataSize)) {SEGMENT.fill(SEGCOLOR(0)); return 350;} //mode_static(); //allocation failed
 
   PongBall* ball = reinterpret_cast<PongBall*>(SEGENV.data);
-  PongBall* racket_left = reinterpret_cast<PongBall*>(SEGENV.data + sizeof(pongBall));
-  Racket* racket_right = reinterpret_cast<Racket*>(SEGENV.data + 2* sizeof(racket));
+  Racket* racket_left = reinterpret_cast<Racket*>(SEGENV.data + sizeof(pongBall));
+  Racket* racket_right = reinterpret_cast<Racket*>(SEGENV.data + sizeof(racket) + sizeof(pongBall));
 
   // static uint16_t previousX, previousY;
 
@@ -143,6 +156,10 @@ uint16_t mode_pongGame(void) {
     racket_left->dir_y = 0.18;
     racket_left->speed = 1;
     racket_left->color = BLUE;
+    racket_left->max_y = vH - racket_left->height;
+    racket_left->pinPoti = pinPotiLeft;
+    racket_left->poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
+    racket_left->poti_range = 3100.0 - racket_left->poti_min;
 
     racket_right->width = 1;
     racket_right->height = vH/4;
@@ -151,6 +168,10 @@ uint16_t mode_pongGame(void) {
     racket_right->dir_y = -0.18;
     racket_right->speed = 1;
     racket_right->color = BLUE;
+    racket_right->max_y = vH - racket_right->height;
+    racket_right->pinPoti = pinPotiRight;
+    racket_right->poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
+    racket_right->poti_range = 3100.0 - racket_right->poti_min;
 
 
     setupPins();
@@ -161,8 +182,8 @@ uint16_t mode_pongGame(void) {
   SEGMENT.fill(BLACK);
 
   ball->move();
-  racket_left->move();
-  racket_right->move2();
+  racket_left->moveAnalog();
+  racket_right->moveAnalog();
 
 
   if (ball->hit(racket_left)) {
