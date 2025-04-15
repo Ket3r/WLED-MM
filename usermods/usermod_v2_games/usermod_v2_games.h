@@ -368,6 +368,8 @@ class GamesUsermod : public Usermod {
         { pinDown, false },  // input
       };
       assert(pinManager.allocateMultiplePins(pins, 2, PinOwner::UM_GAMES));
+      pinMode(pinUp, INPUT_PULLUP);
+      pinMode(pinDown, INPUT_PULLUP);
 
       strip.addEffect(255, &mode_pongGame, _data_FX_MODE_PONGGAME);
       #ifdef USERMOD_MPU6050_IMU
