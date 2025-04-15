@@ -2,8 +2,8 @@
 
 #include "wled.h"
 
-static int8_t pinUp = 16;
-static int8_t pinDown = 4;
+static int8_t pinUp = 26;
+static int8_t pinDown = 27;
 
 
 static void setupPins()
@@ -84,8 +84,10 @@ typedef struct PongBall {
 
 struct Racket : PongBall {
   void move2() {
+    float new_y = y;
     bool isMoveNeeded = false;
     bool isDirectionUp = false;
+
     if(LOW == digitalRead(pinUp)) {
       isMoveNeeded = true;
       isDirectionUp = true;
@@ -97,18 +99,11 @@ struct Racket : PongBall {
     if (!isMoveNeeded)
       return;
 
-    float new_y = y;
     if (isDirectionUp)
       new_y += height / 8;
     else
       new_y -= height / 8;
-
-    if (new_y <= 0)
-      return; // do nothing
-    else if (new_y + height-1 >= SEGMENT.virtualHeight()-1)
-      return; // do nothing
-    else
-      y = new_y;
+    y = new_y;
   }
 } racket;
 
