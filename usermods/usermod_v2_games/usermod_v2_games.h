@@ -148,6 +148,9 @@ uint16_t mode_pongGame(void) {
     racket_right->dir_y = -0.18;
     racket_right->speed = 1;
     racket_right->color = BLUE;
+
+
+    setupPins();
   }
 
   ball->speed = SEGMENT.speed/30.0;
