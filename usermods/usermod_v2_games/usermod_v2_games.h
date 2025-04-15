@@ -261,12 +261,12 @@ class GamesUsermod : public Usermod {
 
     void readFromJsonState(JsonObject& root)
     {
-      userVar0 = root["user0"] | userVar0; //if "user0" key exists in JSON, update, else keep old value
+      //userVar0 = root["user0"] | userVar0; //if "user0" key exists in JSON, update, else keep old value
     }
 
     void addToConfig(JsonObject& root)
     {
-      // JsonObject top = root.createNestedObject("gamesUsermod");
+      JsonObject top = root.createNestedObject("gamesUsermod");
     }
 
     bool readFromConfig(JsonObject& root)
