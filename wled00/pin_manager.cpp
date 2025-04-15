@@ -60,6 +60,7 @@ String PinManagerClass::getOwnerText(PinOwner tag) {
     case PinOwner::UM_RotaryEncoderUI   : return(F("Rotary Enc. (UM)")); break;       // "usermod_v2_rotary_encoder_ui.h"
     case PinOwner::UM_MultiRelay        : return(F("Multi Relay (UM)")); break;       // "usermod_multi_relay.h"
     case PinOwner::UM_AnimatedStaircase : return(F("Anim.Staircase (UM)")); break;    // "Animated_Staircase.h"
+    case PinOwner::UM_GAMES             : return(F("Games (UM)")); break;    // "Animated_Staircase.h"
     case PinOwner::UM_RGBRotaryEncoder  : return(F("RGB Rotary Enc. (UM)")); break;   // "rgb-rotary-encoder.h"
     case PinOwner::UM_QuinLEDAnPenta    : return(F("QuinLEDAnPenta (UM)")); break;    // "quinled-an-penta.h"
     case PinOwner::UM_BME280            : return(F("BME280 (UM)")); break;            // "usermod_bme280.h" -- Uses "standard" HW_I2C pins
