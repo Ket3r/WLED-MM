@@ -5,6 +5,19 @@
 static int8_t pinUp = 26;
 static int8_t pinDown = 27;
 
+
+static void setupPins()
+{
+  // allocate pins
+  PinManagerPinType pins[2] = {
+      {pinUp, false},   // input
+      {pinDown, false}, // input
+  };
+  assert(pinManager.allocateMultiplePins(pins, 2, PinOwner::UM_GAMES));
+  pinMode(pinUp, INPUT_PULLUP);
+  pinMode(pinDown, INPUT_PULLUP);
+}
+
 //inspired by https://noobtuts.com/cpp/2d-pong-game
 typedef struct PongBall {
   float x;// = SEGMENT.virtualWidth() / 2;
@@ -202,15 +215,7 @@ class GamesUsermod : public Usermod {
   public:
 
     void setup() {
-      // allocate pins
-      PinManagerPinType pins[2] = {
-        { pinUp, false },  // input
-        { pinDown, false },  // input
-      };
-      assert(pinManager.allocateMultiplePins(pins, 2, PinOwner::UM_GAMES));
-      pinMode(pinUp, INPUT_PULLUP);
-      pinMode(pinDown, INPUT_PULLUP);
-
+      setupPins();
       strip.addEffect(255, &mode_pongGame, _data_FX_MODE_PONGGAME);
     }
 
