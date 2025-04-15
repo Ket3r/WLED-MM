@@ -362,6 +362,13 @@ class GamesUsermod : public Usermod {
   public:
 
     void setup() {
+      // allocate pins
+      PinManagerPinType pins[2] = {
+        { pinUp, false },  // input
+        { pinDown, false },  // input
+      };
+      assert(pinManager.allocateMultiplePins(pins, 2, PinOwner::UM_GAMES));
+
       strip.addEffect(255, &mode_pongGame, _data_FX_MODE_PONGGAME);
       #ifdef USERMOD_MPU6050_IMU
         IMU = (MPU6050Driver *)usermods.lookup(USERMOD_ID_IMU);
@@ -370,12 +377,6 @@ class GamesUsermod : public Usermod {
         #endif
       #endif
       strip.addEffect(255, &mode_3DIMUCube, _data_FX_MODE_3DIMUCube); //works also without IMU
-      // allocate pins
-      PinManagerPinType pins[4] = {
-        { pinUp, false },  // input
-        { pinDown, false },  // input
-      };
-      assert(pinManager.allocateMultiplePins(pins, 2, PinOwner::UM_GAMES));
     }
 
     void connected() {
