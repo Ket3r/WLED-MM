@@ -2,8 +2,8 @@
 
 #include "wled.h"
 
-static int8_t pinUp = 26;
-static int8_t pinDown = 27;
+static int8_t pinUp = 16;
+static int8_t pinDown = 4;
 
 
 static void setupPins()
