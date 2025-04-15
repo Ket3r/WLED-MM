@@ -84,10 +84,10 @@ struct Racket : PongBall {
   void move() override {
     bool isMoveNeeded = false;
     bool isDirectionUp = false;
-    if(HIGH == digitalRead(pinUp)) {
+    if(LOW == digitalRead(pinUp)) {
       isMoveNeeded = true;
       isDirectionUp = true;
-    } else if (HIGH == digitalRead(pinDown)) {
+    } else if (LOW == digitalRead(pinDown)) {
       isMoveNeeded = true;
       isDirectionUp = false;
     }
@@ -356,8 +356,8 @@ static const char _data_FX_MODE_3DIMUCube[] PROGMEM = "🎮 3DIMUCube ☾@,Persp
 
 class GamesUsermod : public Usermod {
   private:
-    int8_t pinUp      = -1;    // disabled
-    int8_t pinDown   = -1;    // disabled
+    int8_t pinUp     = 26;    // disabled
+    int8_t pinDown   = 27;    // disabled
 
   public:
 
