@@ -82,10 +82,13 @@ struct Racket : PongBall {
     bool isMoveNeeded = false;
     bool isDirectionUp = false;
 
-    if(LOW == digitalRead(pinUp)) {
+    int pinUpStatus = digitalRead(pinUp);
+    int pinDownStatus = digitalRead(pinDown);
+
+    if(LOW == pinUpStatus) {
       isMoveNeeded = true;
       isDirectionUp = true;
-    } else if (LOW == digitalRead(pinDown)) {
+    } else if (LOW == pinDownStatus) {
       isMoveNeeded = true;
       isDirectionUp = false;
     }
@@ -94,9 +97,9 @@ struct Racket : PongBall {
       return;
 
     if (isDirectionUp)
-      new_y += height / 8;
+      new_y += 1;
     else
-      new_y -= height / 8;
+      new_y -= 1;
     y = new_y;
   }
 } racket;
