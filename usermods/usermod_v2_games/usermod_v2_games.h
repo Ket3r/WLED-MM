@@ -5,7 +5,7 @@
 static int8_t pinUp = 26;
 static int8_t pinDown = 27;
 static int8_t pinPotiRight = 34;
-static int8_t pinPotiLeft = 34;
+static int8_t pinPotiLeft = 35;
 
 
 static void setupPins()
@@ -240,6 +240,8 @@ static const char _data_FX_MODE_PONGGAME[] PROGMEM = "🎮 Pong ☾@!;!;!;2";
 
 class GamesUsermod : public Usermod {
   private:
+    // strings to reduce flash memory usage (used more than twice)
+    static const char _name[];
 
   public:
 
@@ -266,13 +268,16 @@ class GamesUsermod : public Usermod {
 
     void addToConfig(JsonObject& root)
     {
-      JsonObject top = root.createNestedObject("gamesUsermod");
+      JsonObject top = root[FPSTR(_name)];
+      if (top.isNull()) {
+        top = root.createNestedObject(FPSTR(_name));
+      }
     }
 
     bool readFromConfig(JsonObject& root)
     {
 
-      JsonObject top = root["gamesUsermod"];
+      JsonObject top = root[FPSTR(_name)];
 
       bool configComplete = !top.isNull();
 
@@ -288,3 +293,5 @@ class GamesUsermod : public Usermod {
       return USERMOD_ID_GAMES;
     }
 };
+
+const char GamesUsermod::_name[]                      PROGMEM = "Pong Game by Uli & Pete";
