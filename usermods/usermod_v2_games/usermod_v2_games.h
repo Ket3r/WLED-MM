@@ -1,15 +1,3 @@
-/*
-  Games usermod by ewowi, september 2022
-
-  Contains:
-    - mode_pongGame
-    - Depending on USERMOD_MPU6050_IMU
-      - mode_IMUTest (shows IMU values only if WLED_DEBUG)
-    - class Frame3D and struct Voxel
-    - mode_3DIMUCube (uses class Frame3D to show a rotating cube, if USERMOD_MPU6050_IMU then IMU used for rotation)
-    - class GamesUsermod (Add the modes/effects and initiates IMU)
-*/
-
 #pragma once
 
 #include "wled.h"
@@ -25,7 +13,7 @@ typedef struct PongBall {
   float speed;// = 1;
   uint8_t scoreLeft, scoreRight;
   uint32_t color;
-  virtual void move() {
+  void move() {
     x += dir_x * speed;
     y += dir_y * speed;
   }
@@ -81,7 +69,7 @@ typedef struct PongBall {
 struct Racket : PongBall {
   int8_t pinUp;
   int8_t pinDown;
-  void move() override {
+  void move2() {
     bool isMoveNeeded = false;
     bool isDirectionUp = false;
     if(LOW == digitalRead(pinUp)) {
@@ -119,7 +107,7 @@ uint16_t mode_pongGame(void) {
 
   PongBall* ball = reinterpret_cast<PongBall*>(SEGENV.data);
   PongBall* racket_left = reinterpret_cast<PongBall*>(SEGENV.data + sizeof(pongBall));
-  Racket* racket_right = reinterpret_cast<Racket*>(SEGENV.data + 2* sizeof(racket));
+  PongBall* racket_right = reinterpret_cast<PongBall*>(SEGENV.data + 2* sizeof(pongBall));
 
   // static uint16_t previousX, previousY;
 
@@ -207,153 +195,6 @@ uint16_t mode_pongGame(void) {
 
 static const char _data_FX_MODE_PONGGAME[] PROGMEM = "🎮 Pong ☾@!;!;!;2";
 
-//https://howtomechatronics.com/tutorials/arduino/arduino-and-mpu6050-accelerometer-and-gyroscope-tutorial/
-
-#ifdef USERMOD_MPU6050_IMU
-MPU6050Driver *IMU = nullptr;
-uint16_t mode_IMUTest(void) { 
-  SEGMENT.fill(BLACK);
-
-  uint8_t y = 0;
-
-  if ((IMU != nullptr) && (IMU->dmpReady)) {
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->aa.x+INT16_MAX)/(2*INT16_MAX), y+=1, BLUE);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->aa.y+INT16_MAX)/(2*INT16_MAX), y+=1, BLUE);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->aa.z+INT16_MAX)/(2*INT16_MAX), y+=1, BLUE);
-    
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->aaReal.x+INT16_MAX)/(2*INT16_MAX), y+=1, BLUE);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->aaReal.y+INT16_MAX)/(2*INT16_MAX), y+=1, BLUE);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->aaReal.z+INT16_MAX)/(2*INT16_MAX), y+=1, BLUE);
-    
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->gy.x+1024)/(2*1024), y+=1, RED);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->gy.y+1024)/(2*1024), y+=1, RED);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->gy.z+1024)/(2*1024), y+=1, RED);
-
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->aaWorld.x+INT16_MAX)/(2*INT16_MAX), y+=1, BLUE);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->aaWorld.y+INT16_MAX)/(2*INT16_MAX), y+=1, BLUE);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->aaWorld.z+INT16_MAX)/(2*INT16_MAX), y+=1, BLUE);
-    
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->ypr[0]* 180/M_PI+180)/(2*180), y+=1, RED);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->ypr[1]* 180/M_PI+180)/(2*180), y+=1, RED);
-    SEGMENT.setPixelColorXY(SEGMENT.virtualWidth() * (IMU->ypr[2]* 180/M_PI+180)/(2*180), y+=1, RED);
-  }
-
-  return FRAMETIME;
-}
-static const char _data_FX_MODE_IMUTest[] PROGMEM = "🎮 IMUTest ☾@;;;2d";
-
-#endif
-
-//WLEDMM 3D to 2D mapping
-struct Voxel {
-  float x;
-  float y;
-  float z;
-  uint32_t col;
-};
-
-//https://xem.github.io/articles/projection.html
-class Frame3D {
-  private:
-    std::vector<Voxel> points;
-    void rotate(float a, float b, float angle, float &x, float &y) {
-      x = cosf(angle) * a - sinf(angle) * b;
-      y = sinf(angle) * a + cosf(angle) * b;
-    }
-    float yaw;
-    float pitch; 
-    float roll;
-  public:
-    Frame3D(float yaw1, float pitch1, float roll1) {
-      points.clear();
-      yaw = yaw1;
-      pitch = pitch1;
-      roll = roll1;
-    }
-    ~Frame3D() {
-      std::sort(points.begin(), points.end(), [](const Voxel &lhs, const Voxel &rhs) {return lhs.z > rhs.z;});
-      for(size_t i = 0; i < points.size(); ++i) {
-        float w = 0.5;//SEGMENT.virtualWidth()/2;
-        float h = 0.5;//SEGMENT.virtualHeight()/2;
-        float perspective = SEGMENT.intensity / 64.0;
-        if(points[i].z > 0) {
-          float projX, projY;
-          projX = w+points[i].x/points[i].z*perspective;
-          projY = h+points[i].y/points[i].z*perspective;
-          SEGMENT.setPixelColorXY(projX, projY, points[i].col, false); //no aa
-        }
-      }
-    }
-    void setPixelColorXYZ(Voxel voxel) {
-      float camx = 0;
-      float camy = 0;
-      float camz = -6;
-      rotate(voxel.x,voxel.z,yaw, voxel.x, voxel.z); // Camera yaw
-      rotate(voxel.y,voxel.z,pitch, voxel.y, voxel.z); // Camera pitch
-      rotate(voxel.x,voxel.y,roll, voxel.x, voxel.y); // Camera roll
-      voxel.x -= camx;
-      voxel.y -= camy;
-      voxel.z -= camz;
-      points.push_back(voxel);
-    }
-    void drawLineXYZ(Voxel from, Voxel to, uint32_t col) {
-      //causes crash on ESP8266: StoreProhibited: A store referenced a page mapped with an attribute that does not permit stores, maybe not enough free heap
-      for (float x=MIN(from.x, to.x); x<=MAX(from.x, to.x); x+=.05)
-        for (float y=MIN(from.y, to.y); y<=MAX(from.y, to.y); y+=.05)
-          for (float z=MIN(from.z, to.z); z<=MAX(from.z, to.z); z+=.05)
-            setPixelColorXYZ({x, y, z, col});
-    }
-};
-
-uint16_t mode_3DIMUCube(void) { 
-  SEGMENT.fill(BLACK);
-
-  float yaw = 0;
-  float pitch = 0; 
-  float roll = 0;
-
-  #ifdef USERMOD_MPU6050_IMU
-    if ((IMU != nullptr) && (IMU->dmpReady)) {
-      yaw = -IMU->ypr[0];
-      pitch = IMU->ypr[1];
-      roll = IMU->ypr[2];
-    }
-  #else
-    //simulate rotation
-    yaw = (fmod(SEGENV.call, 360)-180) / (180/M_PI); //-180 .. 180
-    pitch = yaw;
-    roll = yaw;
-  #endif
-
-  Frame3D frame3D = Frame3D(yaw, pitch, roll);
-
-  Voxel leftbottomback = {-1,-1,-1};
-  Voxel rightbottomback = {1,-1,-1};
-  Voxel lefttopback = {-1,1,-1};
-  Voxel righttopback = {1,1,-1};
-  Voxel leftbottomfront = {-1,-1,1};
-  Voxel rightbottomfront = {1,-1,1};
-  Voxel lefttopfront = {-1,1,1};
-  Voxel righttopfront = {1,1,1};
-  frame3D.drawLineXYZ(leftbottomback, rightbottomback, SEGMENT.color_from_palette(255/12, false, true, 0));
-  frame3D.drawLineXYZ(leftbottomback, lefttopback, SEGMENT.color_from_palette(255/12*2, false, true, 0));
-  frame3D.drawLineXYZ(rightbottomback, righttopback, SEGMENT.color_from_palette(255/12*3, false, true, 0));
-  frame3D.drawLineXYZ(lefttopback, righttopback, SEGMENT.color_from_palette(255/12*4, false, true, 0));
-
-  frame3D.drawLineXYZ(leftbottomfront, leftbottomback, SEGMENT.color_from_palette(255/12*9, false, true, 0));
-  frame3D.drawLineXYZ(rightbottomfront, rightbottomback, SEGMENT.color_from_palette(255/12*10, false, true, 0));
-  frame3D.drawLineXYZ(lefttopfront, lefttopback, SEGMENT.color_from_palette(255/12*11, false, true, 0));
-  frame3D.drawLineXYZ(righttopfront, righttopback, SEGMENT.color_from_palette(255/12*12, false, true, 0));
-
-  frame3D.drawLineXYZ(leftbottomfront, rightbottomfront, SEGMENT.color_from_palette(255/12*5, false, true, 0));
-  frame3D.drawLineXYZ(leftbottomfront, lefttopfront, SEGMENT.color_from_palette(255/12*6, false, true, 0));
-  frame3D.drawLineXYZ(rightbottomfront, righttopfront, SEGMENT.color_from_palette(255/12*7, false, true, 0));
-  frame3D.drawLineXYZ(lefttopfront, righttopfront, SEGMENT.color_from_palette(255/12*8, false, true, 0));
-
-  return FRAMETIME;
-}
-static const char _data_FX_MODE_3DIMUCube[] PROGMEM = "🎮 3DIMUCube ☾@,Perspective;!;!;2;pal=1"; //WLEDMM random smooth
-
 class GamesUsermod : public Usermod {
   private:
     int8_t pinUp     = 26;    // disabled
@@ -372,13 +213,6 @@ class GamesUsermod : public Usermod {
       pinMode(pinDown, INPUT_PULLUP);
 
       strip.addEffect(255, &mode_pongGame, _data_FX_MODE_PONGGAME);
-      #ifdef USERMOD_MPU6050_IMU
-        IMU = (MPU6050Driver *)usermods.lookup(USERMOD_ID_IMU);
-        #ifdef WLED_DEBUG
-          strip.addEffect(255, &mode_IMUTest, _data_FX_MODE_IMUTest);
-        #endif
-      #endif
-      strip.addEffect(255, &mode_3DIMUCube, _data_FX_MODE_3DIMUCube); //works also without IMU
     }
 
     void connected() {
