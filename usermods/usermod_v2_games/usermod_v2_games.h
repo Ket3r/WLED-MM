@@ -2,6 +2,9 @@
 
 #include "wled.h"
 
+static int8_t pinUp = 26;
+static int8_t pinDown = 27;
+
 //inspired by https://noobtuts.com/cpp/2d-pong-game
 typedef struct PongBall {
   float x;// = SEGMENT.virtualWidth() / 2;
@@ -67,8 +70,6 @@ typedef struct PongBall {
 
 
 struct Racket : PongBall {
-  int8_t pinUp = 26;
-  int8_t pinDown = 27;
   void move2() {
     bool isMoveNeeded = false;
     bool isDirectionUp = false;
@@ -108,8 +109,6 @@ uint16_t mode_pongGame(void) {
   PongBall* ball = reinterpret_cast<PongBall*>(SEGENV.data);
   PongBall* racket_left = reinterpret_cast<PongBall*>(SEGENV.data + sizeof(pongBall));
   Racket* racket_right = reinterpret_cast<Racket*>(SEGENV.data + 2* sizeof(racket));
-  racket_right->pinUp = 26;
-  racket_right->pinDown = 27;
 
   // static uint16_t previousX, previousY;
 
@@ -199,8 +198,6 @@ static const char _data_FX_MODE_PONGGAME[] PROGMEM = "🎮 Pong ☾@!;!;!;2";
 
 class GamesUsermod : public Usermod {
   private:
-    int8_t pinUp     = 26;    // disabled
-    int8_t pinDown   = 27;    // disabled
 
   public:
 
