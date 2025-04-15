@@ -85,9 +85,9 @@ struct Racket : PongBall {
 
     float new_y = y;
     if (isDirectionUp)
-      new_y += 1;
+      new_y += height / 8;
     else
-      new_y -= 1;
+      new_y -= height / 8;
 
     if (new_y <= 0)
       return; // do nothing
