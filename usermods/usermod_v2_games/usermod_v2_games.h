@@ -21,9 +21,12 @@ public:
   float y;
   uint8_t width;
   uint8_t height;
-  uint32_t color;
+  uint32_t color = SEGCOLOR(0);
 
-  virtual void move() {};
+  virtual void update()
+  {
+    color = SEGCOLOR(0);
+  }
   virtual void draw() {};
 };
 
@@ -34,9 +37,15 @@ public:
   float speed;
   uint8_t scoreLeft, scoreRight; // TODO: Move that somewhere else
 
-  void move() override {
+  void update() override {
+    Item::update();
+
+    speed = SEGMENT.speed/30.0;
+
+    vec2_norm();
     x += dir_x * speed;
     y += dir_y * speed;
+    SEGMENT.setPixelColorXY((uint16_t)x, (uint16_t)y, color);
   }
 
   void vec2_norm() {
@@ -98,13 +107,17 @@ public:
   float poti_range;
   bool is_rotation_inverted;
 
-  void move() {
+  void update() override{
+    Item::update();
+
     uint32_t millis = analogReadMilliVolts(pinPoti); // Liest die Spannung des Potentiometers
     float tmp = (millis - poti_min) / poti_range * (float) max_y;
     if (is_rotation_inverted)
       y = max_y - tmp;
     else
       y = tmp;
+
+    SEGMENT.drawLine(x, y, 0, y + height-1, color);
   }
 };
 
@@ -133,14 +146,11 @@ uint16_t mode_pongGame(void) {
     ball->y = vH/2;
     ball->dir_x = -0.1;
     ball->dir_y = 0.18;
-    ball->color = BLUE;
-    // ball->speed = 1;//SEGMENT.speed/30.0;
 
     racket_left->width = 1;
     racket_left->height = vH/4;
     racket_left->x = 0;
     racket_left->y = vH/2 - racket_left->height/2;
-    racket_left->color = BLUE;
     racket_left->max_y = vH - racket_left->height;
     racket_left->pinPoti = pinPotiLeft;
     racket_left->poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
@@ -151,7 +161,6 @@ uint16_t mode_pongGame(void) {
     racket_right->height = vH/4;
     racket_right->x = vW - 1;
     racket_right->y = vH/2 - racket_right->height/2;
-    racket_right->color = BLUE;
     racket_right->max_y = vH - racket_right->height;
     racket_right->pinPoti = pinPotiRight;
     racket_right->poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
@@ -162,13 +171,12 @@ uint16_t mode_pongGame(void) {
     setupPins();
   }
 
-  ball->speed = SEGMENT.speed/30.0;
 
   SEGMENT.fill(BLACK);
 
-  ball->move();
-  racket_left->move();
-  racket_right->move();
+  racket_right->update();
+  racket_left->update();
+  ball->update();
 
 
   if (ball->hit(racket_left)) {
@@ -191,12 +199,7 @@ uint16_t mode_pongGame(void) {
 
   ball->hit();
 
-  ball->vec2_norm();
 
-  SEGMENT.setPixelColorXY((uint16_t)ball->x, (uint16_t)ball->y, ball->color);
-
-  SEGMENT.drawLine(0, racket_left->y, 0, racket_left->y + racket_left->height-1, racket_left->color);
-  SEGMENT.drawLine(vW-1, racket_right->y, vW-1, racket_right->y + racket_right->height-1, racket_right->color);
 
   for (int i=0; i<vH; i+=2) {
     SEGMENT.setPixelColorXY(vW/2, i, BLUE);
