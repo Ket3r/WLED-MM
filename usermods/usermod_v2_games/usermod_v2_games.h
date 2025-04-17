@@ -15,21 +15,30 @@ static void setupPins()
   analogSetAttenuation(ADC_11db);
 }
 
-//inspired by https://noobtuts.com/cpp/2d-pong-game
-typedef struct PongBall {
-  float x;// = SEGMENT.virtualWidth() / 2;
-  float y;// = SEGMENT.virtualHeight() / 2;
-  float dir_x;// = -1;
-  float dir_y;// = 0;
-  uint8_t width;// = 8;
-  uint8_t height;// = 8;
-  float speed;// = 1;
-  uint8_t scoreLeft, scoreRight;
+class Item {
+public:
+  float x;
+  float y;
+  uint8_t width;
+  uint8_t height;
   uint32_t color;
-  void move() {
+
+  virtual void move() {};
+  virtual void draw() {};
+};
+
+class PongBall : public Item {
+public:
+  float dir_x;
+  float dir_y;
+  float speed;
+  uint8_t scoreLeft, scoreRight; // TODO: Move that somewhere else
+
+  void move() override {
     x += dir_x * speed;
     y += dir_y * speed;
   }
+
   void vec2_norm() {
     // sets a vectors length to 1 (which means that x + y == 1)
     float length = sqrt((dir_x * dir_x) + (dir_y * dir_y));
@@ -39,6 +48,7 @@ typedef struct PongBall {
         dir_x *= length;
     }
   }
+
   void hit() {
     // hit left wall?
     if (x <= 0) {
@@ -61,7 +71,8 @@ typedef struct PongBall {
         dir_y = -fabs(dir_y); // force it to be negative
     }
   }
-  bool hit(PongBall *other) {
+
+  bool hit(Item *other) {
     if (x < other->x + other->width && 
       x >= other->x &&
       y < other->y + other->height &&
@@ -76,49 +87,18 @@ typedef struct PongBall {
     else
       return false;
   }
-} pongBall;
+};
 
 
-struct Racket : PongBall {
+class Racket : public Item {
+public:
   uint16_t max_y;
   int8_t pinPoti;
   float poti_min;
   float poti_range;
   bool is_rotation_inverted;
 
-  void moveDigital() {
-    float new_y = y;
-    bool isMoveNeeded = false;
-    bool isDirectionUp = false;
-
-    int pinUpStatus = digitalRead(pinUp);
-    int pinDownStatus = digitalRead(pinDown);
-
-    if(LOW == pinUpStatus) {
-      isMoveNeeded = true;
-      isDirectionUp = true;
-    } else if (LOW == pinDownStatus) {
-      isMoveNeeded = true;
-      isDirectionUp = false;
-    }
-
-    if (!isMoveNeeded)
-      return;
-
-    if (isDirectionUp)
-      new_y += 1;
-    else
-      new_y -= 1;
-    
-    if (new_y <= 0)
-      return; // do nothing
-    else if (new_y + height-1 >= SEGMENT.virtualHeight()-1)
-      return; // do nothing
-    else
-      y = new_y;
-  }
-
-  void moveAnalog() {
+  void move() {
     uint32_t millis = analogReadMilliVolts(pinPoti); // Liest die Spannung des Potentiometers
     float tmp = (millis - poti_min) / poti_range * (float) max_y;
     if (is_rotation_inverted)
@@ -126,25 +106,27 @@ struct Racket : PongBall {
     else
       y = tmp;
   }
-} racket;
+};
 
 
 //effect functions
 uint16_t mode_pongGame(void) { 
 
-  uint16_t dataSize = 1 * sizeof(pongBall) + 2 * sizeof(racket);
-  if (!SEGENV.allocateData(dataSize)) {SEGMENT.fill(SEGCOLOR(0)); return 350;} //mode_static(); //allocation failed
+  uint16_t dataSize = 1 * sizeof(PongBall) + 2 * sizeof(Racket);
+  if (!SEGENV.allocateData(dataSize)) {SEGMENT.fill(SEGCOLOR(0)); return 350;} //allocation failed
 
   PongBall* ball = reinterpret_cast<PongBall*>(SEGENV.data);
-  Racket* racket_left = reinterpret_cast<Racket*>(SEGENV.data + sizeof(pongBall));
-  Racket* racket_right = reinterpret_cast<Racket*>(SEGENV.data + sizeof(racket) + sizeof(pongBall));
-
-  // static uint16_t previousX, previousY;
+  Racket* racket_left = reinterpret_cast<Racket*>(SEGENV.data + sizeof(PongBall));
+  Racket* racket_right = reinterpret_cast<Racket*>(SEGENV.data + sizeof(Racket) + sizeof(PongBall));
 
   uint16_t vW = SEGMENT.virtualWidth();
   uint16_t vH = SEGMENT.virtualHeight();
 
   if (SEGENV.call == 0) {
+    new (ball) PongBall();
+    new (racket_left) Racket();
+    new (racket_right) Racket();
+
     ball->width = 1;
     ball->height = 1;
     ball->x = vW/2;
@@ -158,8 +140,6 @@ uint16_t mode_pongGame(void) {
     racket_left->height = vH/4;
     racket_left->x = 0;
     racket_left->y = vH/2 - racket_left->height/2;
-    racket_left->dir_y = 0.18;
-    racket_left->speed = 1;
     racket_left->color = BLUE;
     racket_left->max_y = vH - racket_left->height;
     racket_left->pinPoti = pinPotiLeft;
@@ -171,8 +151,6 @@ uint16_t mode_pongGame(void) {
     racket_right->height = vH/4;
     racket_right->x = vW - 1;
     racket_right->y = vH/2 - racket_right->height/2;
-    racket_right->dir_y = -0.18;
-    racket_right->speed = 1;
     racket_right->color = BLUE;
     racket_right->max_y = vH - racket_right->height;
     racket_right->pinPoti = pinPotiRight;
@@ -189,8 +167,8 @@ uint16_t mode_pongGame(void) {
   SEGMENT.fill(BLACK);
 
   ball->move();
-  racket_left->moveAnalog();
-  racket_right->moveAnalog();
+  racket_left->move();
+  racket_right->move();
 
 
   if (ball->hit(racket_left)) {
@@ -212,12 +190,8 @@ uint16_t mode_pongGame(void) {
   }
 
   ball->hit();
-  racket_left->hit();
-  racket_right->hit();
 
   ball->vec2_norm();
-  racket_left->vec2_norm();
-  racket_right->vec2_norm();
 
   SEGMENT.setPixelColorXY((uint16_t)ball->x, (uint16_t)ball->y, ball->color);
 
