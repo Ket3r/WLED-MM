@@ -45,6 +45,10 @@ public:
     vec2_norm();
     x += dir_x * speed;
     y += dir_y * speed;
+  }
+
+  void draw() override 
+  {
     SEGMENT.setPixelColorXY((uint16_t)x, (uint16_t)y, color);
   }
 
@@ -107,7 +111,8 @@ public:
   float poti_range;
   bool is_rotation_inverted;
 
-  void update() override{
+  void update() override 
+  {
     Item::update();
 
     uint32_t millis = analogReadMilliVolts(pinPoti); // Liest die Spannung des Potentiometers
@@ -117,6 +122,10 @@ public:
     else
       y = tmp;
 
+  }
+
+  void draw() override 
+  {
     SEGMENT.drawLine(x, y, 0, y + height-1, color);
   }
 };
@@ -199,6 +208,9 @@ uint16_t mode_pongGame(void) {
 
   ball->hit();
 
+  racket_left->draw();
+  racket_right->draw();
+  ball->draw();
 
 
   for (int i=0; i<vH; i+=2) {
