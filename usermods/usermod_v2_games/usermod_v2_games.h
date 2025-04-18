@@ -126,7 +126,7 @@ public:
 
   void draw() override 
   {
-    SEGMENT.drawLine(x, y, 0, y + height-1, color);
+    SEGMENT.drawLine(x, y, x, y + height-1, color);
   }
 };
 
