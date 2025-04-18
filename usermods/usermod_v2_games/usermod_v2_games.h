@@ -1,6 +1,7 @@
 #pragma once
 
 #include "wled.h"
+#include "limits.h"
 
 static int8_t pinUp = 26;
 static int8_t pinDown = 27;
@@ -30,21 +31,102 @@ public:
   virtual void draw() {};
 };
 
+float calc_hit_time(uint16_t max, uint16_t min, float dir, float speed, float position)
+{
+    float hit_time = 999999999999999999;
+    if (dir > 0)
+      hit_time = ((float)max - position) / (dir * speed);
+    else if (dir < 0)
+      hit_time = (position - (float)min) / (-1.0f * dir * speed);
+    return hit_time;
+}
+
 class PongBall : public Item {
 public:
+  uint16_t max_x, max_y, min_x, min_y; // Playfield borders
   float dir_x;
   float dir_y;
   float speed;
   uint8_t scoreLeft, scoreRight; // TODO: Move that somewhere else
 
-  void update() override {
+  void update(Item *racket_left, Item *racket_right) {
     Item::update();
+    DEBUG_PRINT("x ");
+    DEBUG_PRINTLN(x);
+    DEBUG_PRINT("y ");
+    DEBUG_PRINTLN(y);
+    DEBUG_PRINT("speed ");
+    DEBUG_PRINTLN(speed);
+    DEBUG_PRINT("dir_x ");
+    DEBUG_PRINTLN(dir_x);
+    DEBUG_PRINT("dir_y ");
+    DEBUG_PRINTLN(dir_y);
 
-    speed = SEGMENT.speed/30.0;
+    speed = 1.0f;
 
-    vec2_norm();
-    x += dir_x * speed;
-    y += dir_y * speed;
+    int i = 0;
+    while (speed > 0)
+    {
+      move(racket_left, racket_right);
+      if (i++ > 4)
+        {
+          DEBUG_PRINT("Paniced @speed: ");
+           DEBUG_PRINTLN(speed) ;
+          break;
+        }
+    }
+  }
+
+  void move(Item *racket_left, Item *racket_right)
+  {
+    // Get Time required to hit top or bottom border
+    float hit_y_time = calc_hit_time(max_y, min_y, dir_y, speed, y);
+    float hit_x_time = calc_hit_time(max_x, min_x, dir_x, speed, x);
+    float hit_racket_time = calc_hit_time(racket_right->x, racket_left->x, dir_x, speed, x);
+    DEBUG_PRINT("hit_times: ");
+    DEBUG_PRINTLN(hit_y_time);
+    DEBUG_PRINTLN(hit_x_time);
+    DEBUG_PRINTLN(hit_racket_time);
+
+
+    // replace hit_x_time with racket_time if racket would be actually hit.
+    if (hit_racket_time <= 1) {
+      // Racket would be hit at hight:
+      float racket_hit_y = y + dir_y * speed * hit_racket_time;
+      if (dir_x > 0) {
+        if ((racket_right->y <= racket_hit_y) && (racket_hit_y <= (racket_right->y + racket_right->height))) {
+          hit_x_time = hit_racket_time;
+        }
+      } else {
+        if ((racket_left->y <= racket_hit_y) && (racket_hit_y <= (racket_left->y + racket_left->height))) {
+          hit_x_time = hit_racket_time;
+        }
+      }
+    }
+
+    if (hit_y_time > 1 && hit_x_time > 1 && hit_racket_time > 1) {
+      // No hits continue traveling
+      x += dir_x * speed;
+      y += dir_y * speed;
+      speed -= speed;
+      DEBUG_PRINTLN("Normal travel");
+    } else {
+      if (hit_y_time < hit_x_time) {
+        x += dir_x * speed * hit_y_time;
+        y += dir_y * speed * hit_y_time;
+        speed *= (1 - hit_y_time);
+        dir_y = -1.0f * dir_y;
+        DEBUG_PRINT("New DIR_Y: ");
+        DEBUG_PRINTLN(dir_y);
+      } else {
+        x += dir_x * speed * hit_x_time;
+        y += dir_y * speed * hit_x_time;
+        speed *= (1 - hit_x_time);
+        dir_x = -1.0f * dir_x;
+        DEBUG_PRINT("New DIR_X: ");
+        DEBUG_PRINTLN(dir_x);
+      }
+    }
   }
 
   void draw() override 
@@ -155,6 +237,11 @@ uint16_t mode_pongGame(void) {
     ball->y = vH/2;
     ball->dir_x = -0.1;
     ball->dir_y = 0.18;
+    ball->vec2_norm();
+    ball->min_x = 0;
+    ball->min_y = 0;
+    ball->max_y = vH;
+    ball->max_x = vW;
 
     racket_left->width = 1;
     racket_left->height = vH/4;
@@ -185,28 +272,8 @@ uint16_t mode_pongGame(void) {
 
   racket_right->update();
   racket_left->update();
-  ball->update();
+  ball->update(racket_left, racket_right);
 
-
-  if (ball->hit(racket_left)) {
-    ball->scoreLeft++;
-    if (ball->scoreLeft>9) ball->scoreLeft = 0;
-
-    racket_left->color = SEGCOLOR(1);
-  } else {
-    racket_left->color = SEGCOLOR(0);
-  }
-
-  if (ball->hit(racket_right)) {
-    ball->scoreRight++;
-    if (ball->scoreRight>9) ball->scoreRight = 0;
-
-    racket_right->color = SEGCOLOR(1);
-  } else {
-    racket_right->color = SEGCOLOR(0);
-  }
-
-  ball->hit();
 
   racket_left->draw();
   racket_right->draw();
