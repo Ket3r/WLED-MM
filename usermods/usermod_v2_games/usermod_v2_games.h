@@ -192,18 +192,18 @@ uint16_t mode_pongGame(void) {
     ball->scoreLeft++;
     if (ball->scoreLeft>9) ball->scoreLeft = 0;
 
-    racket_left->color = RED;
+    racket_left->color = SEGCOLOR(1);
   } else {
-    racket_left->color = BLUE;
+    racket_left->color = SEGCOLOR(0);
   }
 
   if (ball->hit(racket_right)) {
     ball->scoreRight++;
     if (ball->scoreRight>9) ball->scoreRight = 0;
 
-    racket_right->color = RED;
+    racket_right->color = SEGCOLOR(1);
   } else {
-    racket_right->color = BLUE;
+    racket_right->color = SEGCOLOR(0);
   }
 
   ball->hit();
@@ -214,13 +214,13 @@ uint16_t mode_pongGame(void) {
 
 
   for (int i=0; i<vH; i+=2) {
-    SEGMENT.setPixelColorXY(vW/2, i, BLUE);
+    SEGMENT.setPixelColorXY(vW/2, i, SEGCOLOR(0));
   }
 
   char tempString[4] = { '\0' };
   snprintf(tempString, 4, "%1d%1d", ball->scoreRight, ball->scoreLeft);
-  SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, BLUE);
-  SEGMENT.drawCharacter(tempString[1], vW/2+2, -2, 5, 8, BLUE);
+  SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, SEGCOLOR(0));
+  SEGMENT.drawCharacter(tempString[1], vW/2+2, -2, 5, 8, SEGCOLOR(0));
 
   return FRAMETIME;
 }
