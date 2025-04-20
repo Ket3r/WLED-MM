@@ -97,13 +97,13 @@ public:
       // Racket would be hit at hight:
       float racket_hit_y = y + dir_y * speed * hit_racket_time;
       if (dir_x > 0) {
-        ball->scoreRight += 1;
         if ((racket_right->y <= racket_hit_y) && (racket_hit_y <= (racket_right->y + racket_right->height))) {
+          scoreLeft += 1;
           hit_x_time = hit_racket_time;
         }
       } else {
-        ball->scoreLeft += 1;
         if ((racket_left->y <= racket_hit_y) && (racket_hit_y <= (racket_left->y + racket_left->height))) {
+          scoreRight += 1;
           hit_x_time = hit_racket_time;
         }
       }
