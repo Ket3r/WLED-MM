@@ -402,7 +402,7 @@ void registerUsermods()
 #endif
 
 #ifdef USERMOD_GAMES
-  usermods.add(new GamesUsermod());
+  usermods.add(new GamesUsermod("PongGame", true));
 #endif
 #ifdef USERMOD_ANIMARTRIX
   usermods.add(new AnimartrixUsermod("Animartrix", false));

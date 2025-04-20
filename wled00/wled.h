@@ -1,6 +1,6 @@
 #ifndef WLED_H
 #define WLED_H
-#define WLED_DEBUG
+//#define WLED_DEBUG
 /*
    Main sketch, global variable declarations
    @title WLED project sketch

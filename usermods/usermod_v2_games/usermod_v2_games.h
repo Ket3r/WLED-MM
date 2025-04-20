@@ -8,6 +8,9 @@ static int8_t pinDown = 27;
 static int8_t pinPotiRight = 34;
 static int8_t pinPotiLeft = 35;
 
+static const char _data_FX_MODE_PONGGAME[] PROGMEM = "🎮 Pong ☾@!;!;!;2";
+
+static float game_speed = 1.0;
 
 static void setupPins()
 {
@@ -62,7 +65,7 @@ public:
     DEBUG_PRINT("dir_y ");
     DEBUG_PRINTLN(dir_y);
 
-    speed = 1.0f;
+    speed = game_speed;
 
     int i = 0;
     while (speed > 0)
@@ -129,7 +132,7 @@ public:
     }
   }
 
-  void draw() override 
+  void draw() override
   {
     SEGMENT.setPixelColorXY((uint16_t)x, (uint16_t)y, color);
   }
@@ -161,14 +164,14 @@ public:
     if (y <= 0) {
         dir_y = fabs(dir_y); // force it to be positive
     }
-    // hit bottom wall? 
+    // hit bottom wall?
     if (y + height-1 >= SEGMENT.virtualHeight()-1) {
         dir_y = -fabs(dir_y); // force it to be negative
     }
   }
 
   bool hit(Item *other) {
-    if (x < other->x + other->width && 
+    if (x < other->x + other->width &&
       x >= other->x &&
       y < other->y + other->height &&
       y >= other->y) {
@@ -193,7 +196,7 @@ public:
   float poti_range;
   bool is_rotation_inverted;
 
-  void update() override 
+  void update() override
   {
     Item::update();
 
@@ -206,15 +209,13 @@ public:
 
   }
 
-  void draw() override 
+  void draw() override
   {
     SEGMENT.drawLine(x, y, x, y + height-1, color);
   }
 };
 
-
-//effect functions
-uint16_t mode_pongGame(void) { 
+uint16_t mode_pongGame(void) {
 
   uint16_t dataSize = 1 * sizeof(PongBall) + 2 * sizeof(Racket);
   if (!SEGENV.allocateData(dataSize)) {SEGMENT.fill(SEGCOLOR(0)); return 350;} //allocation failed
@@ -292,14 +293,19 @@ uint16_t mode_pongGame(void) {
   return FRAMETIME;
 }
 
-static const char _data_FX_MODE_PONGGAME[] PROGMEM = "🎮 Pong ☾@!;!;!;2";
+
 
 class GamesUsermod : public Usermod {
   private:
+    /* configuration */
+    bool enabled = false;
+
     // strings to reduce flash memory usage (used more than twice)
-    static const char _name[];
+    static const char _speed[];
+
 
   public:
+    GamesUsermod(const char *name, bool enabled):Usermod(name, enabled) {} //WLEDMM: this shouldn't be necessary (passthrough of constructor), maybe because Usermod is an abstract class
 
     void setup() {
       setupPins();
@@ -312,32 +318,38 @@ class GamesUsermod : public Usermod {
     void loop() {
     }
 
-    void addToJsonState(JsonObject& root)
-    {
-      //root["user0"] = userVar0;
-    }
-
-    void readFromJsonState(JsonObject& root)
-    {
-      //userVar0 = root["user0"] | userVar0; //if "user0" key exists in JSON, update, else keep old value
-    }
-
     void addToConfig(JsonObject& root)
     {
+      Usermod::addToConfig(root);
       JsonObject top = root[FPSTR(_name)];
-      if (top.isNull()) {
-        top = root.createNestedObject(FPSTR(_name));
-      }
+
+      top["speed"]  = game_speed;     // usermodparam
     }
 
     bool readFromConfig(JsonObject& root)
     {
-
+      Usermod::readFromConfig(root); //WLEDMM: configComplete not implemented here (todo?)
       JsonObject top = root[FPSTR(_name)];
+      DEBUG_PRINT(FPSTR(_name));
 
-      bool configComplete = !top.isNull();
 
-      return configComplete;
+      if (top.isNull()) {
+        DEBUG_PRINTLN(F(": No config found. (Using defaults.)"));
+        return false;
+      }
+
+      game_speed = top["speed"] | game_speed;
+
+      return true;
+    }
+
+  void appendConfigData() {
+      oappend(SET_F("addHB('PongGame');"));
+
+      //oappend(SET_F("dd=addDropdown('staircase','selectfield');"));
+      //oappend(SET_F("addOption(dd,'1st value',0);"));
+      //oappend(SET_F("addOption(dd,'2nd value',1);"));
+      //oappend(SET_F("addInfo('staircase:selectfield',1,'additional info');"));  // 0 is field type, 1 is actual field
     }
 
     void handleOverlayDraw()
@@ -350,4 +362,5 @@ class GamesUsermod : public Usermod {
     }
 };
 
-const char GamesUsermod::_name[]                      PROGMEM = "Pong Game by Uli & Pete";
+//effect functions
+const char GamesUsermod::_speed[]                     PROGMEM = "speed";
