@@ -11,6 +11,7 @@ static int8_t pinPotiLeft = 35;
 static const char _data_FX_MODE_PONGGAME[] PROGMEM = "🎮 Pong ☾@!;!;!;2";
 
 static float game_speed = 1.0;
+static int adc_averaging_count = 1;
 
 static void setupPins()
 {
@@ -190,8 +191,10 @@ public:
   {
     Item::update();
 
-    uint32_t millis = analogReadMilliVolts(pinPoti); // Liest die Spannung des Potentiometers
-    float tmp = (millis - poti_min) / poti_range * (float) max_y;
+    uint32_t millis = 0;
+    for (int i = 0; i < adc_averaging_count; i++)
+      millis += analogReadMilliVolts(pinPoti); // Liest die Spannung des Potentiometers
+    float tmp = (((float) millis / adc_averaging_count) - poti_min) / poti_range * (float) max_y;
     if (is_rotation_inverted)
       y = max_y - tmp;
     else
@@ -292,6 +295,7 @@ class GamesUsermod : public Usermod {
 
     // strings to reduce flash memory usage (used more than twice)
     static const char _speed[];
+    static const char _AdcAvgCnt[];
 
 
   public:
