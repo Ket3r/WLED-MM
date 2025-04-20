@@ -103,9 +103,15 @@ public:
           scoreLeft += 1;
           x = max_x/2;
           y = max_y/2;
-          dir_x = random(50) / -100.0f;
-          dir_y = random(50) / 100.0f;
-          vec2_norm();
+          float minAngle = -PI / 4.0f; // -π/4
+          float maxAngle = PI / 4.0f;  // +π/4
+          // Generate a random float between 0 and 1
+          float randUnit = random(0, 10001) / 10000.0f;
+          // Scale to desired range
+          float randomAngle = minAngle + (maxAngle - minAngle) * randUnit;
+
+          dir_y = sin(randomAngle);
+          dir_x = -cos(randomAngle);
           speed -= speed;
         }
       } else {
@@ -115,9 +121,16 @@ public:
           scoreRight += 1;
           x = max_x/2;
           y = max_y/2;
-          dir_x = random(50) / 100.0f;
-          dir_y = random(50) / 100.0f;
-          vec2_norm();
+          float minAngle = -PI / 4.0f; // -π/4
+          float maxAngle = PI / 4.0f;  // +π/4
+          // Generate a random float between 0 and 1
+          float randUnit = random(0, 10001) / 10000.0f;
+          // Scale to desired range
+          float randomAngle = minAngle + (maxAngle - minAngle) * randUnit;
+
+          dir_y = sin(randomAngle);
+          dir_x = -cos(randomAngle);
+
           speed -= speed;
         }
       }
@@ -300,7 +313,8 @@ class GamesUsermod : public Usermod {
       Usermod::addToConfig(root);
       JsonObject top = root[FPSTR(_name)];
 
-      top["speed"]  = game_speed;     // usermodparam
+      top[FPSTR(_speed)]  = game_speed;     // usermodparam
+      top[FPSTR(_AdcAvgCnt)] = adc_averaging_count;
     }
 
     bool readFromConfig(JsonObject& root)
@@ -315,7 +329,8 @@ class GamesUsermod : public Usermod {
         return false;
       }
 
-      game_speed = top["speed"] | game_speed;
+      game_speed = top[FPSTR(_speed)] | game_speed;
+      adc_averaging_count = top[FPSTR(_AdcAvgCnt)] | adc_averaging_count;
 
       return true;
     }
@@ -341,3 +356,4 @@ class GamesUsermod : public Usermod {
 
 //effect functions
 const char GamesUsermod::_speed[]                     PROGMEM = "speed";
+const char GamesUsermod::_AdcAvgCnt[]                     PROGMEM = "AdcAveragingCount";
