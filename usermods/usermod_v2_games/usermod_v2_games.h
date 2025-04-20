@@ -148,45 +148,6 @@ public:
         dir_x *= length;
     }
   }
-
-  void hit() {
-    // hit left wall?
-    if (x <= 0) {
-        dir_x = fabs(dir_x); // force it to be positive
-        // scoreLeft++;
-        // if (scoreLeft>9) scoreLeft = 0;
-    }
-    // hit right wall?
-    if (x + width-1 >= SEGMENT.virtualWidth()-1) {
-        dir_x = -fabs(dir_x); // force it to be negative
-        // scoreRight++;
-        // if (scoreRight>9) scoreRight = 0;
-    }
-    // hit top wall?
-    if (y <= 0) {
-        dir_y = fabs(dir_y); // force it to be positive
-    }
-    // hit bottom wall?
-    if (y + height-1 >= SEGMENT.virtualHeight()-1) {
-        dir_y = -fabs(dir_y); // force it to be negative
-    }
-  }
-
-  bool hit(Item *other) {
-    if (x < other->x + other->width &&
-      x >= other->x &&
-      y < other->y + other->height &&
-      y >= other->y) {
-      // set fly direction depending on where it hit the racket
-      // (t is 0.5 if hit at top, 0 at center, -0.5 at bottom)
-      float t = ((y - other->y) / other->height) - 0.5f;
-      dir_x = fabs(dir_x); // force it to be positive
-      dir_y = t;
-      return true;
-    }
-    else
-      return false;
-  }
 };
 
 
