@@ -98,13 +98,21 @@ public:
       float racket_hit_y = y + dir_y * speed * hit_racket_time;
       if (dir_x > 0) {
         if ((racket_right->y <= racket_hit_y) && (racket_hit_y <= (racket_right->y + racket_right->height))) {
-          scoreLeft += 1;
           hit_x_time = hit_racket_time;
+        } else {
+          scoreLeft += 1;
+          x = vW/2;
+          y = vH/2;
+          speed -= speed;
         }
       } else {
         if ((racket_left->y <= racket_hit_y) && (racket_hit_y <= (racket_left->y + racket_left->height))) {
-          scoreRight += 1;
           hit_x_time = hit_racket_time;
+        } else {
+          scoreRight += 1;
+          x = vW/2;
+          y = vH/2;
+          speed -= speed;
         }
       }
     }
