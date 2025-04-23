@@ -208,84 +208,94 @@ public:
         }
 };
 
-uint16_t mode_pongGame(void) {
 
-        uint16_t dataSize = 1 * sizeof(PongBall) + 2 * sizeof(Racket);
-        if (!SEGENV.allocateData(dataSize)) {SEGMENT.fill(SEGCOLOR(0)); return 350;} //allocation failed
+class PongGame {
+private:
+        uint16_t vW, vH;
 
-        PongBall* ball = reinterpret_cast<PongBall*>(SEGENV.data);
-        Racket* racket_left = reinterpret_cast<Racket*>(SEGENV.data + sizeof(PongBall));
-        Racket* racket_right = reinterpret_cast<Racket*>(SEGENV.data + sizeof(Racket) + sizeof(PongBall));
+        PongBall ball;
+        Racket racket_left, racket_right;
 
-        uint16_t vW = SEGMENT.virtualWidth();
-        uint16_t vH = SEGMENT.virtualHeight();
+public:
+        PongGame(uint16_t vW, uint16_t vH) : ball(), racket_left(), racket_right() {
+                this->vW = vW;
+                this->vH = vH;
 
-        if (SEGENV.call == 0) {
-                new (ball) PongBall();
-                new (racket_left) Racket();
-                new (racket_right) Racket();
+                ball.width = 1;
+                ball.height = 1;
+                ball.x = vW/2;
+                ball.y = vH/2;
+                ball.dir_x = -0.1;
+                ball.dir_y = 0.18;
+                ball.vec2_norm();
+                ball.min_x = 0;
+                ball.min_y = 0;
+                ball.max_y = vH;
+                ball.max_x = vW;
 
-                ball->width = 1;
-                ball->height = 1;
-                ball->x = vW/2;
-                ball->y = vH/2;
-                ball->dir_x = -0.1;
-                ball->dir_y = 0.18;
-                ball->vec2_norm();
-                ball->min_x = 0;
-                ball->min_y = 0;
-                ball->max_y = vH;
-                ball->max_x = vW;
+                racket_left.width = 1;
+                racket_left.height = vH/4;
+                racket_left.x = 0;
+                racket_left.y = vH/2 - racket_left.height/2;
+                racket_left.max_y = vH - racket_left.height;
+                racket_left.pinPoti = pinPotiLeft;
+                racket_left.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
+                racket_left.poti_range = 3100.0 - racket_left.poti_min;
+                racket_left.is_rotation_inverted = true;
 
-                racket_left->width = 1;
-                racket_left->height = vH/4;
-                racket_left->x = 0;
-                racket_left->y = vH/2 - racket_left->height/2;
-                racket_left->max_y = vH - racket_left->height;
-                racket_left->pinPoti = pinPotiLeft;
-                racket_left->poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
-                racket_left->poti_range = 3100.0 - racket_left->poti_min;
-                racket_left->is_rotation_inverted = true;
-
-                racket_right->width = 1;
-                racket_right->height = vH/4;
-                racket_right->x = vW - 1;
-                racket_right->y = vH/2 - racket_right->height/2;
-                racket_right->max_y = vH - racket_right->height;
-                racket_right->pinPoti = pinPotiRight;
-                racket_right->poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
-                racket_right->poti_range = 3100.0 - racket_right->poti_min;
-                racket_right->is_rotation_inverted = false;
-
+                racket_right.width = 1;
+                racket_right.height = vH/4;
+                racket_right.x = vW - 1;
+                racket_right.y = vH/2 - racket_right.height/2;
+                racket_right.max_y = vH - racket_right.height;
+                racket_right.pinPoti = pinPotiRight;
+                racket_right.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
+                racket_right.poti_range = 3100.0 - racket_right.poti_min;
+                racket_right.is_rotation_inverted = false;
 
                 setupPins();
         }
+        uint16_t loop() {
+                SEGMENT.fill(BLACK);
+
+                racket_right.update();
+                racket_left.update();
+                ball.update(&racket_left, &racket_right);
 
 
-        SEGMENT.fill(BLACK);
-
-        racket_right->update();
-        racket_left->update();
-        ball->update(racket_left, racket_right);
+                racket_left.draw();
+                racket_right.draw();
+                ball.draw();
 
 
-        racket_left->draw();
-        racket_right->draw();
-        ball->draw();
+                for (int i=0; i<vH; i+=2) {
+                        SEGMENT.setPixelColorXY(vW/2, i, SEGCOLOR(0));
+                }
 
+                char tempString[4] = { '\0' };
+                snprintf(tempString, 4, "%1d%1d", ball.scoreRight, ball.scoreLeft);
+                SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, SEGCOLOR(0));
+                SEGMENT.drawCharacter(tempString[1], vW/2+2, -2, 5, 8, SEGCOLOR(0));
 
-        for (int i=0; i<vH; i+=2) {
-                SEGMENT.setPixelColorXY(vW/2, i, SEGCOLOR(0));
+                return FRAMETIME;
         }
+};
 
-        char tempString[4] = { '\0' };
-        snprintf(tempString, 4, "%1d%1d", ball->scoreRight, ball->scoreLeft);
-        SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, SEGCOLOR(0));
-        SEGMENT.drawCharacter(tempString[1], vW/2+2, -2, 5, 8, SEGCOLOR(0));
 
-        return FRAMETIME;
+
+uint16_t mode_pongGame(void) {
+        // Initialization on first segment run.
+        if (SEGENV.call == 0) {
+                if (!SEGENV.allocateData(sizeof(PongGame))) {
+                        SEGMENT.fill(SEGCOLOR(0));
+                        return 350;
+                }
+
+                new (SEGENV.data) PongGame(SEGMENT.virtualWidth(), SEGMENT.virtualHeight());
+        }
+        PongGame *game = reinterpret_cast<PongGame*>(SEGENV.data);
+        return game->loop();
 }
-
 
 
 class GamesUsermod : public Usermod {
