@@ -68,8 +68,11 @@ public:
         PongGame(uint16_t vW, uint16_t vH);
         uint16_t loop();
 
-        uint16_t playStrategy();
-        uint16_t countDownStrategy();
+        void playStrategySetup();
+        uint16_t playStrategyLoop();
+
+        void countDownStrategySetup();
+        uint16_t countDownStrategyLoop();
 };
 
 
@@ -295,41 +298,8 @@ PongGame::PongGame(uint16_t vW, uint16_t vH) :
         this->vW = vW;
         this->vH = vH;
 
-        SEGENV.aux0 = 0;
-        SEGENV.aux1 = 3;
-        currentStrategy = &PongGame::countDownStrategy;  // Or playStrategy
-
-        ball.width = 1;
-        ball.height = 1;
-        ball.x = vW/2;
-        ball.y = vH/2;
-        ball.dir_x = -0.1;
-        ball.dir_y = 0.18;
-        ball.vec2_norm();
-        ball.min_x = 0;
-        ball.min_y = 0;
-        ball.max_y = vH;
-        ball.max_x = vW;
-
-        racket_left.width = 1;
-        racket_left.height = vH/4;
-        racket_left.x = 0;
-        racket_left.y = vH/2 - racket_left.height/2;
-        racket_left.max_y = vH - racket_left.height;
-        racket_left.pinPoti = pinPotiLeft;
-        racket_left.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
-        racket_left.poti_range = 3100.0 - racket_left.poti_min;
-        racket_left.is_rotation_inverted = true;
-
-        racket_right.width = 1;
-        racket_right.height = vH/4;
-        racket_right.x = vW - 1;
-        racket_right.y = vH/2 - racket_right.height/2;
-        racket_right.max_y = vH - racket_right.height;
-        racket_right.pinPoti = pinPotiRight;
-        racket_right.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
-        racket_right.poti_range = 3100.0 - racket_right.poti_min;
-        racket_right.is_rotation_inverted = false;
+        countDownStrategySetup();
+        currentStrategy = &PongGame::countDownStrategyLoop;
 
         setupPins();
 }
@@ -383,7 +353,42 @@ uint16_t GamesUsermod::getId()
         return USERMOD_ID_GAMES;
 }
 
-uint16_t PongGame::playStrategy()
+void PongGame::playStrategySetup()
+{
+        ball.width = 1;
+        ball.height = 1;
+        ball.x = vW/2;
+        ball.y = vH/2;
+        ball.dir_x = -0.1;
+        ball.dir_y = 0.18;
+        ball.vec2_norm();
+        ball.min_x = 0;
+        ball.min_y = 0;
+        ball.max_y = vH;
+        ball.max_x = vW;
+
+        racket_left.width = 1;
+        racket_left.height = vH/4;
+        racket_left.x = 0;
+        racket_left.y = vH/2 - racket_left.height/2;
+        racket_left.max_y = vH - racket_left.height;
+        racket_left.pinPoti = pinPotiLeft;
+        racket_left.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
+        racket_left.poti_range = 3100.0 - racket_left.poti_min;
+        racket_left.is_rotation_inverted = true;
+
+        racket_right.width = 1;
+        racket_right.height = vH/4;
+        racket_right.x = vW - 1;
+        racket_right.y = vH/2 - racket_right.height/2;
+        racket_right.max_y = vH - racket_right.height;
+        racket_right.pinPoti = pinPotiRight;
+        racket_right.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
+        racket_right.poti_range = 3100.0 - racket_right.poti_min;
+        racket_right.is_rotation_inverted = false;
+}
+
+uint16_t PongGame::playStrategyLoop()
 {
         SEGMENT.fill(BLACK);
 
@@ -401,15 +406,24 @@ uint16_t PongGame::playStrategy()
                 SEGMENT.setPixelColorXY(vW/2, i, SEGCOLOR(0));
         }
 
-        char tempString[4] = { '\0' };
-        snprintf(tempString, 4, "%1d%1d", ball.scoreRight, ball.scoreLeft);
-        SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, SEGCOLOR(0));
-        SEGMENT.drawCharacter(tempString[1], vW/2+2, -2, 5, 8, SEGCOLOR(0));
+        char tempString[5] = { '\0' };
+        snprintf(tempString, 5, "%2d%2d", ball.scoreRight, ball.scoreLeft);
+
+        int16_t char_width = 5;
+        SEGMENT.drawCharacter(tempString[0], vW/2-2-char_width-1-char_width, -2, char_width, 8, SEGCOLOR(0));
+        SEGMENT.drawCharacter(tempString[1], vW/2-2-char_width, -2, char_width, 8, SEGCOLOR(0));
+        SEGMENT.drawCharacter(tempString[2], vW/2+2, -2, char_width, 8, SEGCOLOR(0));
+        SEGMENT.drawCharacter(tempString[3], vW/2+2+char_width+2, -2, char_width, 8, SEGCOLOR(0));
 
         return FRAMETIME;
 }
 
-uint16_t PongGame::countDownStrategy()
+void PongGame::countDownStrategySetup()
+{
+        SEGENV.aux0 = 0;
+        SEGENV.aux1 = 3;
+}
+uint16_t PongGame::countDownStrategyLoop()
 {
         char tempString[4] = { '\0' };
         snprintf(tempString, 4, "%1d", SEGENV.aux1);
@@ -424,8 +438,10 @@ uint16_t PongGame::countDownStrategy()
                 SEGENV.aux0 = 0;
         }
 
-        if (SEGENV.aux1 == 0 && SEGENV.aux0 > 47)
-                currentStrategy = &PongGame::playStrategy;
+        if (SEGENV.aux1 == 0 && SEGENV.aux0 > 47) {
+                playStrategySetup();
+                currentStrategy = &PongGame::playStrategyLoop;
+        }
 
         return FRAMETIME;
 }
