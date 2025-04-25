@@ -54,7 +54,6 @@ public:
         void draw() override;
 };
 
-
 class PongGame {
 private:
         uint16_t vW, vH;
@@ -62,10 +61,15 @@ private:
         PongBall ball;
         Racket racket_left, racket_right;
 
+        // Function pointer for strategy
+        uint16_t (PongGame::*currentStrategy)();
 public:
         static void setupPins();
         PongGame(uint16_t vW, uint16_t vH);
         uint16_t loop();
+
+        uint16_t playStrategy();
+        uint16_t countDownStrategy();
 };
 
 
@@ -291,6 +295,10 @@ PongGame::PongGame(uint16_t vW, uint16_t vH) :
         this->vW = vW;
         this->vH = vH;
 
+        SEGENV.aux0 = 0;
+        SEGENV.aux1 = 3;
+        currentStrategy = &PongGame::countDownStrategy;  // Or playStrategy
+
         ball.width = 1;
         ball.height = 1;
         ball.x = vW/2;
@@ -328,28 +336,10 @@ PongGame::PongGame(uint16_t vW, uint16_t vH) :
 
 uint16_t PongGame::loop()
 {
-        SEGMENT.fill(BLACK);
-
-        racket_right.update();
-        racket_left.update();
-        ball.update(&racket_left, &racket_right);
-
-
-        racket_left.draw();
-        racket_right.draw();
-        ball.draw();
-
-
-        for (int i=0; i<vH; i+=2) {
-                SEGMENT.setPixelColorXY(vW/2, i, SEGCOLOR(0));
-        }
-
-        char tempString[4] = { '\0' };
-        snprintf(tempString, 4, "%1d%1d", ball.scoreRight, ball.scoreLeft);
-        SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, SEGCOLOR(0));
-        SEGMENT.drawCharacter(tempString[1], vW/2+2, -2, 5, 8, SEGCOLOR(0));
-
-        return FRAMETIME;
+    if (currentStrategy) {
+        return (this->*currentStrategy)();
+    }
+    return 0; // Default/fallback behavior
 }
 
 void GamesUsermod::setup() {
@@ -391,4 +381,51 @@ void GamesUsermod::appendConfigData()
 uint16_t GamesUsermod::getId()
 {
         return USERMOD_ID_GAMES;
+}
+
+uint16_t PongGame::playStrategy()
+{
+        SEGMENT.fill(BLACK);
+
+        racket_right.update();
+        racket_left.update();
+        ball.update(&racket_left, &racket_right);
+
+
+        racket_left.draw();
+        racket_right.draw();
+        ball.draw();
+
+
+        for (int i=0; i<vH; i+=2) {
+                SEGMENT.setPixelColorXY(vW/2, i, SEGCOLOR(0));
+        }
+
+        char tempString[4] = { '\0' };
+        snprintf(tempString, 4, "%1d%1d", ball.scoreRight, ball.scoreLeft);
+        SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, SEGCOLOR(0));
+        SEGMENT.drawCharacter(tempString[1], vW/2+2, -2, 5, 8, SEGCOLOR(0));
+
+        return FRAMETIME;
+}
+
+uint16_t PongGame::countDownStrategy()
+{
+        char tempString[4] = { '\0' };
+        snprintf(tempString, 4, "%1d", SEGENV.aux1);
+
+        SEGMENT.fill(BLACK);
+
+        if (SEGENV.aux0++ > 24)
+                SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, SEGCOLOR(0));
+
+        if (SEGENV.aux0 > 48) {
+                SEGENV.aux1 -= 1;
+                SEGENV.aux0 = 0;
+        }
+
+        if (SEGENV.aux1 == 0 && SEGENV.aux0 > 47)
+                currentStrategy = &PongGame::playStrategy;
+
+        return FRAMETIME;
 }
