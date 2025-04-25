@@ -73,6 +73,9 @@ public:
 
         void countDownStrategySetup();
         uint16_t countDownStrategyLoop();
+        
+        void finishStrategySetup(bool is_winner_left);
+        uint16_t finishStrategyLoop();
 };
 
 
@@ -409,11 +412,21 @@ uint16_t PongGame::playStrategyLoop()
         char tempString[5] = { '\0' };
         snprintf(tempString, 5, "%2d%2d", ball.scoreRight, ball.scoreLeft);
 
-        int16_t char_width = 5;
-        SEGMENT.drawCharacter(tempString[0], vW/2-2-char_width-1-char_width, -2, char_width, 8, SEGCOLOR(0));
-        SEGMENT.drawCharacter(tempString[1], vW/2-2-char_width, -2, char_width, 8, SEGCOLOR(0));
-        SEGMENT.drawCharacter(tempString[2], vW/2+2, -2, char_width, 8, SEGCOLOR(0));
-        SEGMENT.drawCharacter(tempString[3], vW/2+2+char_width+2, -2, char_width, 8, SEGCOLOR(0));
+        uint8_t char_width = 5;
+        uint8_t char_height = 8;
+        SEGMENT.drawCharacter(tempString[0], vW/2-2-char_width-char_width, -2, char_width, char_height, SEGCOLOR(0));
+        SEGMENT.drawCharacter(tempString[1], vW/2-2-char_width, -2, char_width, char_height, SEGCOLOR(0));
+        SEGMENT.drawCharacter(tempString[2], vW/2+2, -2, char_width, char_height, SEGCOLOR(0));
+        SEGMENT.drawCharacter(tempString[3], vW/2+2+char_width, -2, char_width, char_height, SEGCOLOR(0));
+
+        if (ball.scoreRight >= 20) {
+                finishStrategySetup(false);
+                currentStrategy = &PongGame::finishStrategyLoop;
+        }
+        if (ball.scoreLeft >= 20) {
+                finishStrategySetup(true);
+                currentStrategy = &PongGame::finishStrategyLoop;
+        }
 
         return FRAMETIME;
 }
@@ -442,6 +455,29 @@ uint16_t PongGame::countDownStrategyLoop()
                 playStrategySetup();
                 currentStrategy = &PongGame::playStrategyLoop;
         }
+
+        return FRAMETIME;
+}
+
+void PongGame::finishStrategySetup(bool is_winner_left)
+{
+        SEGMENT.fill(BLACK);
+        const char line0[] = "WINNER:";
+        char line1[10] = {0};
+        if (is_winner_left)
+                strcpy(line1, "LEFT");
+        else
+                strcpy(line1, "RIGHT");
+        
+        for (int i = 0; i < strlen(line0); i++)
+                SEGMENT.drawCharacter(line0[i], 5+5*i, 0, 5, 8, SEGCOLOR(0));
+        for (int i = 0; i < strlen(line1); i++)
+                SEGMENT.drawCharacter(line1[i], 5+5*i, 10, 5, 8, SEGCOLOR(0));
+}
+
+
+uint16_t PongGame::finishStrategyLoop()
+{
 
         return FRAMETIME;
 }
