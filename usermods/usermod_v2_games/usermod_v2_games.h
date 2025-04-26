@@ -1,7 +1,6 @@
 #pragma once
 
 #include "wled.h"
-#include "limits.h"
 
 static int8_t pinUp = 26;
 static int8_t pinDown = 27;
@@ -10,8 +9,6 @@ static int8_t pinPotiLeft = 35;
 
 static const char _data_FX_MODE_PONGGAME[] PROGMEM = "🎮 Pong ☾@!;!;!;2";
 
-static float game_speed = 1.0;
-static int adc_averaging_count = 1;
 
 class Item {
 public:
@@ -100,12 +97,26 @@ private:
         /* configuration */
         bool enabled = false;
 
-        // strings to reduce flash memory usage (used more than twice)
-        static const char _speed[];
-        static const char _AdcAvgCnt[];
-
-
 public:
+        struct Config
+        {
+                static float speed;
+                static const char _speed_name[];
+
+                static uint8_t adc_averaging_count;
+                static const char _adc_averaging_count_name[];
+
+                static bool is_left_inverted;
+                static const char _is_left_inverted_name[];
+
+                static bool is_right_inverted;
+                static const char _is_right_inverted_name[];
+
+                static uint8_t win_count;
+                static const char _win_count_name[];
+
+        };
+
         GamesUsermod(const char *name, bool enabled):Usermod(name, enabled) {} //WLEDMM: this shouldn't be necessary (passthrough of constructor), maybe because Usermod is an abstract class
 
         void setup();
@@ -124,8 +135,19 @@ public:
 // This would be in a CPP file :(
 //==============================================================================
 
-const char GamesUsermod::_speed[]                     PROGMEM = "speed";
-const char GamesUsermod::_AdcAvgCnt[]                 PROGMEM = "AdcAveragingCount";
+const char GamesUsermod::Config::_speed_name[]                     PROGMEM = "speed_f";
+const char GamesUsermod::Config::_adc_averaging_count_name[]       PROGMEM = "AdcAveragingCount_u8";
+const char GamesUsermod::Config::_is_right_inverted_name[]         PROGMEM = "isRightInverted_b";
+const char GamesUsermod::Config::_is_left_inverted_name[]          PROGMEM = "isLeftInverted_b";
+const char GamesUsermod::Config::_win_count_name[]                 PROGMEM = "WinCount_u8";
+
+
+float GamesUsermod::Config::speed = 1;
+uint8_t GamesUsermod::Config::adc_averaging_count = 5;
+bool GamesUsermod::Config::is_left_inverted = false;
+bool GamesUsermod::Config::is_right_inverted = false;
+uint8_t GamesUsermod::Config::win_count = 20;
+
 
 void PongGame::setupPins()
 {
@@ -163,7 +185,7 @@ void PongBall::update(Item *racket_left, Item *racket_right)
         DEBUG_PRINT("dir_y ");
         DEBUG_PRINTLN(dir_y);
 
-        speed = game_speed;
+        speed = GamesUsermod::Config::speed;
 
         int i = 0;
         while (speed > 0) {
@@ -278,9 +300,10 @@ void Racket::update()
         Item::update();
 
         uint32_t millis = 0;
-        for (int i = 0; i < adc_averaging_count; i++)
+        for (int i = 0; i < GamesUsermod::Config::adc_averaging_count; i++)
                 millis += analogReadMilliVolts(pinPoti); // Liest die Spannung des Potentiometers
-        float tmp = (((float) millis / adc_averaging_count) - poti_min) / poti_range * (float) max_y;
+        float tmp = (((float) millis / GamesUsermod::Config::adc_averaging_count) - poti_min) / poti_range * (float) max_y;
+
         if (is_rotation_inverted)
                 y = max_y - tmp;
         else
@@ -324,26 +347,25 @@ void GamesUsermod::addToConfig(JsonObject& root)
         Usermod::addToConfig(root);
         JsonObject top = root[FPSTR(_name)];
 
-        top[FPSTR(_speed)]  = game_speed;     // usermodparam
-        top[FPSTR(_AdcAvgCnt)] = adc_averaging_count;
+        top[FPSTR(GamesUsermod::Config::_speed_name)]  = GamesUsermod::Config::speed;
+        top[FPSTR(GamesUsermod::Config::_adc_averaging_count_name)] = GamesUsermod::Config::adc_averaging_count;
+        top[FPSTR(GamesUsermod::Config::_is_left_inverted_name)] = GamesUsermod::Config::is_left_inverted;
+        top[FPSTR(GamesUsermod::Config::_is_right_inverted_name)] = GamesUsermod::Config::is_right_inverted;
+        top[FPSTR(GamesUsermod::Config::_win_count_name)] = GamesUsermod::Config::win_count;
 }
 
 bool GamesUsermod::readFromConfig(JsonObject& root)
 {
-        Usermod::readFromConfig(root); //WLEDMM: configComplete not implemented here (todo?)
+        bool config_complete = Usermod::readFromConfig(root);
         JsonObject top = root[FPSTR(_name)];
-        DEBUG_PRINT(FPSTR(_name));
 
+        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_speed_name)], GamesUsermod::Config::speed);
+        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_adc_averaging_count_name)], GamesUsermod::Config::adc_averaging_count);
+        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_is_left_inverted_name)], GamesUsermod::Config::is_left_inverted);
+        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_is_right_inverted_name)], GamesUsermod::Config::is_right_inverted);
+        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_win_count_name)], GamesUsermod::Config::win_count);
 
-        if (top.isNull()) {
-                DEBUG_PRINTLN(F(": No config found. (Using defaults.)"));
-                return false;
-        }
-
-        game_speed = top[FPSTR(_speed)] | game_speed;
-        adc_averaging_count = top[FPSTR(_AdcAvgCnt)] | adc_averaging_count;
-
-        return true;
+        return config_complete;
 }
 
 void GamesUsermod::appendConfigData()
@@ -378,7 +400,7 @@ void PongGame::playStrategySetup()
         racket_left.pinPoti = pinPotiLeft;
         racket_left.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
         racket_left.poti_range = 3100.0 - racket_left.poti_min;
-        racket_left.is_rotation_inverted = true;
+        racket_left.is_rotation_inverted = GamesUsermod::Config::is_left_inverted;
 
         racket_right.width = 1;
         racket_right.height = vH/4;
@@ -388,7 +410,7 @@ void PongGame::playStrategySetup()
         racket_right.pinPoti = pinPotiRight;
         racket_right.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
         racket_right.poti_range = 3100.0 - racket_right.poti_min;
-        racket_right.is_rotation_inverted = false;
+        racket_right.is_rotation_inverted = GamesUsermod::Config::is_right_inverted;
 }
 
 uint16_t PongGame::playStrategyLoop()
@@ -419,11 +441,11 @@ uint16_t PongGame::playStrategyLoop()
         SEGMENT.drawCharacter(tempString[2], vW/2+2, -2, char_width, char_height, SEGCOLOR(0));
         SEGMENT.drawCharacter(tempString[3], vW/2+2+char_width, -2, char_width, char_height, SEGCOLOR(0));
 
-        if (ball.scoreRight >= 20) {
+        if (ball.scoreRight >= GamesUsermod::Config::win_count) {
                 finishStrategySetup(false);
                 currentStrategy = &PongGame::finishStrategyLoop;
         }
-        if (ball.scoreLeft >= 20) {
+        if (ball.scoreLeft >= GamesUsermod::Config::win_count) {
                 finishStrategySetup(true);
                 currentStrategy = &PongGame::finishStrategyLoop;
         }
@@ -478,6 +500,5 @@ void PongGame::finishStrategySetup(bool is_winner_left)
 
 uint16_t PongGame::finishStrategyLoop()
 {
-
         return FRAMETIME;
 }
