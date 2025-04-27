@@ -611,7 +611,7 @@ uint16_t PongGame::idSelectLoop()
 
         uint8_t char_range = 'Z' - 'A' + 1; // Total number of characters (26)
 
-        int16_t char_height = 8;               // Assuming character height is 8 pixels
+        int16_t char_height = 10;               // Assuming character height is 8 pixels
         int16_t scroll_area_center_y = vH / 2; // Vertical center of the selection area
         int16_t char_x = vW / 2 / 2 - 3;       // Horizontal position of the characters
 
@@ -638,7 +638,7 @@ uint16_t PongGame::idSelectLoop()
                 {
                         char char_to_draw = 'A' + char_index_to_draw;
                         int16_t char_y = scroll_area_center_y + (i - num_visible_chars / 2) * char_height - (current_offset % char_height);
-                        SEGMENT.drawCharacter(char_to_draw, char_x, char_y, 6, 8, SEGCOLOR(0));
+                        SEGMENT.drawCharacter(char_to_draw, char_x, char_y-1, 6, 8, SEGCOLOR(0));
                 }
         }
 
