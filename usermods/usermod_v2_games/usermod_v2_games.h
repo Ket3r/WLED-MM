@@ -420,6 +420,9 @@ void PongGame::playStrategySetup()
         ball.max_y = vH;
         ball.max_x = vW;
 
+        ball.scoreLeft = 0;
+        ball.scoreRight = 0;
+
         racket_left.setupLeft();
         racket_right.setupRight();
 
