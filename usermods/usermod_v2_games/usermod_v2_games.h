@@ -598,27 +598,63 @@ void PongGame::idSelectSetup()
 
 uint16_t PongGame::idSelectLoop()
 {
-        uint32_t millis = 0;
+        uint32_t total_millis = 0;
         for (int i = 0; i < GamesUsermod::Config::adc_averaging_count; i++)
-                millis += analogReadMilliVolts(GamesUsermod::Config::pin_poti_right); // Liest die Spannung des Potentiometers
-        float percentage = (((float) millis / GamesUsermod::Config::adc_averaging_count) - 150.0) / 3000.0;
+        {
+                total_millis += analogReadMilliVolts(GamesUsermod::Config::pin_poti_right); // Reads the potentiometer voltage
+        }
+        float average_voltage = (float)total_millis / GamesUsermod::Config::adc_averaging_count;
+        // Assuming the potentiometer range is roughly 150mV to 3150mV (adjust if needed)
+        float percentage = (average_voltage - 150.0) / 3000.0;
+        // Clamp the percentage to the range [0.0, 1.0]
+        percentage = constrain(percentage, 0.0, 1.0);
 
-        uint8_t char_range = 'Z' - 'A';
+        uint8_t char_range = 'Z' - 'A' + 1; // Total number of characters (26)
 
+        int16_t char_height = 8;               // Assuming character height is 8 pixels
+        int16_t scroll_area_center_y = vH / 2; // Vertical center of the selection area
+        int16_t char_x = vW / 2 / 2 - 3;       // Horizontal position of the characters
 
-        char current_char = (char) char_range*percentage + 'A';
+        // Calculate the vertical offset based on the potentiometer percentage
+        float max_offset = char_range * char_height;
+        float current_offset_float = max_offset * percentage;
+        int16_t current_offset = static_cast<int16_t>(current_offset_float);
 
-        int16_t x = vW/2/2-3;
-        int16_t y = vH/2-3;
         SEGMENT.fill(BLACK);
 
-        SEGMENT.drawCharacter(current_char, x, y + 10, 6, 8, SEGCOLOR(0));
-        id_select_rectangle_right.draw();
-        
+        // Determine the index of the character at the center of the scroll area
+        int selected_char_index = current_offset / char_height;
+        // Ensure the index stays within the valid range
+        selected_char_index = constrain(selected_char_index, 0, char_range - 1);
+        char selected_char = 'A' + selected_char_index;
 
-        if (LOW == digitalRead(GamesUsermod::Config::pin_button_left) || LOW == digitalRead(GamesUsermod::Config::pin_button_right)) {
+        // Define how many characters to draw above and below the selection area
+        int num_visible_chars = 5; // Adjust as needed
+
+        for (int i = 0; i < num_visible_chars; ++i)
+        {
+                int char_index_to_draw = selected_char_index + (i - num_visible_chars / 2);
+                if (char_index_to_draw >= 0 && char_index_to_draw < char_range)
+                {
+                        char char_to_draw = 'A' + char_index_to_draw;
+                        int16_t char_y = scroll_area_center_y + (i - num_visible_chars / 2) * char_height - (current_offset % char_height);
+                        SEGMENT.drawCharacter(char_to_draw, char_x, char_y, 6, 8, SEGCOLOR(0));
+                }
+        }
+
+        // Optionally draw a visual indicator for the selection area
+        id_select_rectangle_right.draw();
+
+        if (LOW == digitalRead(GamesUsermod::Config::pin_button_left) || LOW == digitalRead(GamesUsermod::Config::pin_button_right))
+        {
+                // Here, 'selected_char' holds the character that was in the selection area
+                // You would likely want to store this 'selected_char' and proceed.
+                Serial.print("Selected character: ");
+                Serial.println(selected_char);
                 countDownStrategySetup();
                 currentStrategy = &PongGame::countDownStrategyLoop;
+                // Potentially return the selected character's ID or some representation of it.
+                return static_cast<uint16_t>(selected_char); // Example: return ASCII value
         }
 
         return FRAMETIME;
