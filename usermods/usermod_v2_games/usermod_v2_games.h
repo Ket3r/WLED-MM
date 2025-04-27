@@ -63,6 +63,12 @@ public:
         void setupRight();
 };
 
+class Rectangle : public Item 
+{
+public:
+        void draw() override;
+};
+
 class PongGame {
 private:
         uint16_t vW, vH;
@@ -76,13 +82,18 @@ public:
         static void setupPins();
         PongGame(uint16_t vW, uint16_t vH);
         uint16_t loop();
+        
+        
+        Rectangle id_select_rectangle_right;
+        void idSelectSetup();
+        uint16_t idSelectLoop();
+
+        void countDownStrategySetup();
+        uint16_t countDownStrategyLoop();
 
         float playStrategyCurrentSpeed;
         void playStrategySetup();
         uint16_t playStrategyLoop();
-
-        void countDownStrategySetup();
-        uint16_t countDownStrategyLoop();
         
         void finishStrategySetup(bool is_winner_left);
         uint16_t finishStrategyLoop();
@@ -338,8 +349,8 @@ PongGame::PongGame(uint16_t vW, uint16_t vH) :
         this->vW = vW;
         this->vH = vH;
 
-        countDownStrategySetup();
-        currentStrategy = &PongGame::countDownStrategyLoop;
+        idSelectSetup();
+        currentStrategy = &PongGame::idSelectLoop;
 
         setupPins();
 }
@@ -566,4 +577,49 @@ void Racket::setupRight()
         poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
         poti_range = 3100.0 - poti_min;
         is_rotation_inverted = GamesUsermod::Config::is_right_inverted;
+}
+
+void Rectangle::draw()
+{
+        SEGMENT.drawLine(x, y, x+width, y, color); //right
+        SEGMENT.drawLine(x+width, y, x+width, y+height, color); // up
+        SEGMENT.drawLine(x+width, y+height, x, y+height, color); // left
+        SEGMENT.drawLine(x, y+height, x, y, color);
+}
+
+void PongGame::idSelectSetup()
+{
+        id_select_rectangle_right.color = SEGCOLOR(0);
+        id_select_rectangle_right.width = 8;
+        id_select_rectangle_right.height = 10;
+        id_select_rectangle_right.x = vW/2/2 - 8/2;
+        id_select_rectangle_right.y = vH/2 - 10/2;
+}
+
+uint16_t PongGame::idSelectLoop()
+{
+        uint32_t millis = 0;
+        for (int i = 0; i < GamesUsermod::Config::adc_averaging_count; i++)
+                millis += analogReadMilliVolts(GamesUsermod::Config::pin_poti_right); // Liest die Spannung des Potentiometers
+        float percentage = (((float) millis / GamesUsermod::Config::adc_averaging_count) - 150.0) / 3000.0;
+
+        uint8_t char_range = 'Z' - 'A';
+
+
+        char current_char = (char) char_range*percentage + 'A';
+
+        int16_t x = vW/2/2-3;
+        int16_t y = vH/2-3;
+        SEGMENT.fill(BLACK);
+
+        SEGMENT.drawCharacter(current_char, x, y + 10, 6, 8, SEGCOLOR(0));
+        id_select_rectangle_right.draw();
+        
+
+        if (LOW == digitalRead(GamesUsermod::Config::pin_button_left) || LOW == digitalRead(GamesUsermod::Config::pin_button_right)) {
+                countDownStrategySetup();
+                currentStrategy = &PongGame::countDownStrategyLoop;
+        }
+
+        return FRAMETIME;
 }
