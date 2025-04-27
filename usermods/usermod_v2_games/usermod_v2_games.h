@@ -58,6 +58,9 @@ public:
 
         void update() override;
         void draw() override;
+
+        void setupLeft();
+        void setupRight();
 };
 
 class PongGame {
@@ -417,25 +420,8 @@ void PongGame::playStrategySetup()
         ball.max_y = vH;
         ball.max_x = vW;
 
-        racket_left.width = 1;
-        racket_left.height = vH/4;
-        racket_left.x = 0;
-        racket_left.y = vH/2 - racket_left.height/2;
-        racket_left.max_y = vH - racket_left.height;
-        racket_left.pinPoti = GamesUsermod::Config::pin_poti_left;
-        racket_left.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
-        racket_left.poti_range = 3100.0 - racket_left.poti_min;
-        racket_left.is_rotation_inverted = GamesUsermod::Config::is_left_inverted;
-
-        racket_right.width = 1;
-        racket_right.height = vH/4;
-        racket_right.x = vW - 1;
-        racket_right.y = vH/2 - racket_right.height/2;
-        racket_right.max_y = vH - racket_right.height;
-        racket_right.pinPoti = GamesUsermod::Config::pin_poti_right;
-        racket_right.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
-        racket_right.poti_range = 3100.0 - racket_right.poti_min;
-        racket_right.is_rotation_inverted = GamesUsermod::Config::is_right_inverted;
+        racket_left.setupLeft();
+        racket_right.setupRight();
 
         playStrategyCurrentSpeed = GamesUsermod::Config::speed;
 }
@@ -492,6 +478,8 @@ uint16_t PongGame::playStrategyLoop()
 
 void PongGame::countDownStrategySetup()
 {
+        racket_left.setupLeft();
+        racket_right.setupRight();
         SEGENV.aux0 = 0;
         SEGENV.aux1 = 3;
 }
@@ -502,18 +490,23 @@ uint16_t PongGame::countDownStrategyLoop()
 
         SEGMENT.fill(BLACK);
 
-        if (SEGENV.aux0++ > 24)
+        if (SEGENV.aux0++ > (FRAMETIME/2))
                 SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, SEGCOLOR(0));
 
-        if (SEGENV.aux0 > 48) {
+        if (SEGENV.aux0 > FRAMETIME) {
                 SEGENV.aux1 -= 1;
                 SEGENV.aux0 = 0;
         }
 
-        if (SEGENV.aux1 == 0 && SEGENV.aux0 > 47) {
+        if (SEGENV.aux1 == 0 && SEGENV.aux0 > (FRAMETIME-1)) {
                 playStrategySetup();
                 currentStrategy = &PongGame::playStrategyLoop;
         }
+
+        racket_left.update();
+        racket_left.draw();
+        racket_right.update();
+        racket_right.draw();
 
         return FRAMETIME;
 }
@@ -542,4 +535,32 @@ uint16_t PongGame::finishStrategyLoop()
                 currentStrategy = &PongGame::countDownStrategyLoop;
         }
         return FRAMETIME;
+}
+
+void Racket::setupLeft()
+{
+        uint16_t vH= SEGMENT.virtualHeight();
+        width = 1;
+        height = vH / 4;
+        x = 0;
+        y = vH/2 - height/2;
+        max_y = vH - height;
+        pinPoti = GamesUsermod::Config::pin_poti_left;
+        poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
+        poti_range = 3100.0 - poti_min;
+        is_rotation_inverted = GamesUsermod::Config::is_left_inverted;
+}
+void Racket::setupRight()
+{
+        uint16_t vH= SEGMENT.virtualHeight();
+        uint16_t vW= SEGMENT.virtualWidth();
+        width = 1;
+        height = vH/4;
+        x = vW - 1;
+        y = vH/2 - height/2;
+        max_y = vH - height;
+        pinPoti = GamesUsermod::Config::pin_poti_right;
+        poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
+        poti_range = 3100.0 - poti_min;
+        is_rotation_inverted = GamesUsermod::Config::is_right_inverted;
 }
