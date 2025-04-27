@@ -2,6 +2,20 @@
 
 #include "wled.h"
 
+#define ADD_TO_CONFIG(cfg_name) \
+        top[FPSTR(GamesUsermod::Config::_##cfg_name##_name)] = GamesUsermod::Config::cfg_name;
+
+#define GET_FROM_CONFIG(cfg_name) \
+        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_##cfg_name##_name)], GamesUsermod::Config::cfg_name);
+
+#define DEFINE_CONFIG_PARAM(name, type, defaultValue)                                \
+        const char GamesUsermod::Config::_##name##_name[] PROGMEM = #name "_" #type; \
+        type GamesUsermod::Config::name = defaultValue
+
+#define DEFINE_CONFIG_STRUCT(cfg_name, type) \
+        static type cfg_name; \
+        static const char _##cfg_name##_name[]
+
 static const char _data_FX_MODE_PONGGAME[] PROGMEM = "🎮 Pong ☾@!;!;!;2";
 
 
@@ -60,6 +74,7 @@ public:
         PongGame(uint16_t vW, uint16_t vH);
         uint16_t loop();
 
+        float playStrategyCurrentSpeed;
         void playStrategySetup();
         uint16_t playStrategyLoop();
 
@@ -95,29 +110,17 @@ private:
 public:
         struct Config
         {
-                static float speed;
-                static const char _speed_name[];
-
-                static uint8_t adc_averaging_count;
-                static const char _adc_averaging_count_name[];
-
-                static bool is_left_inverted;
-                static const char _is_left_inverted_name[];
-
-                static bool is_right_inverted;
-                static const char _is_right_inverted_name[];
-
-                static uint8_t win_count;
-                static const char _win_count_name[];
-
-                static int8_t pin_button_right;
-                static const char _pin_button_right_name[];
-                static int8_t pin_button_left;
-                static const char _pin_button_left_name[];
-                static int8_t pin_poti_right;
-                static const char _pin_poti_right_name[];
-                static int8_t pin_poti_left;
-                static const char _pin_poti_left_name[];
+                DEFINE_CONFIG_STRUCT(speed, float);
+                DEFINE_CONFIG_STRUCT(speed_increment, float);
+                DEFINE_CONFIG_STRUCT(speed_multiplier, float);
+                DEFINE_CONFIG_STRUCT(adc_averaging_count, uint8_t);
+                DEFINE_CONFIG_STRUCT(is_left_inverted, bool);
+                DEFINE_CONFIG_STRUCT(is_right_inverted, bool);
+                DEFINE_CONFIG_STRUCT(win_count, uint8_t);
+                DEFINE_CONFIG_STRUCT(pin_button_left, int8_t);
+                DEFINE_CONFIG_STRUCT(pin_poti_left, int8_t);
+                DEFINE_CONFIG_STRUCT(pin_button_right, int8_t);
+                DEFINE_CONFIG_STRUCT(pin_poti_right, int8_t);
         };
 
         GamesUsermod(const char *name, bool enabled):Usermod(name, enabled) {} //WLEDMM: this shouldn't be necessary (passthrough of constructor), maybe because Usermod is an abstract class
@@ -138,25 +141,17 @@ public:
 // This would be in a CPP file :(
 //==============================================================================
 
-const char GamesUsermod::Config::_speed_name[]                     PROGMEM = "speed_f";
-const char GamesUsermod::Config::_adc_averaging_count_name[]       PROGMEM = "AdcAveragingCount_u8";
-const char GamesUsermod::Config::_is_right_inverted_name[]         PROGMEM = "isRightInverted_b";
-const char GamesUsermod::Config::_is_left_inverted_name[]          PROGMEM = "isLeftInverted_b";
-const char GamesUsermod::Config::_win_count_name[]                 PROGMEM = "WinCount_u8";
-const char GamesUsermod::Config::_pin_button_right_name[]          PROGMEM = "ButtonRight_pin";
-const char GamesUsermod::Config::_pin_button_left_name[]           PROGMEM = "ButtonLeft_pin";
-const char GamesUsermod::Config::_pin_poti_right_name[]            PROGMEM = "PotiRight_pin";
-const char GamesUsermod::Config::_pin_poti_left_name[]             PROGMEM = "PotiLeft_pin";
-
-float GamesUsermod::Config::speed = 1;
-uint8_t GamesUsermod::Config::adc_averaging_count = 5;
-bool GamesUsermod::Config::is_left_inverted = false;
-bool GamesUsermod::Config::is_right_inverted = false;
-uint8_t GamesUsermod::Config::win_count = 20;
-int8_t GamesUsermod::Config::pin_button_left = 26;
-int8_t GamesUsermod::Config::pin_button_right = 27;
-int8_t GamesUsermod::Config::pin_poti_left = 34;
-int8_t GamesUsermod::Config::pin_poti_right = 35;
+DEFINE_CONFIG_PARAM(speed, float, 1.0);
+DEFINE_CONFIG_PARAM(speed_increment, float, 0.05);
+DEFINE_CONFIG_PARAM(speed_multiplier, float, 1.0);
+DEFINE_CONFIG_PARAM(adc_averaging_count, uint8_t, 5);
+DEFINE_CONFIG_PARAM(is_left_inverted, bool, false);
+DEFINE_CONFIG_PARAM(is_right_inverted, bool, false);
+DEFINE_CONFIG_PARAM(win_count, uint8_t, 15);
+DEFINE_CONFIG_PARAM(pin_button_left, int8_t, 26);
+DEFINE_CONFIG_PARAM(pin_button_right, int8_t, 27);
+DEFINE_CONFIG_PARAM(pin_poti_left, int8_t, 34);
+DEFINE_CONFIG_PARAM(pin_poti_right, int8_t, 35);
 
 
 void PongGame::setupPins()
@@ -194,8 +189,6 @@ void PongBall::update(Item *racket_left, Item *racket_right)
         DEBUG_PRINTLN(dir_x);
         DEBUG_PRINT("dir_y ");
         DEBUG_PRINTLN(dir_y);
-
-        speed = GamesUsermod::Config::speed;
 
         int i = 0;
         while (speed > 0) {
@@ -357,15 +350,17 @@ void GamesUsermod::addToConfig(JsonObject& root)
         Usermod::addToConfig(root);
         JsonObject top = root[FPSTR(_name)];
 
-        top[FPSTR(GamesUsermod::Config::_speed_name)]  = GamesUsermod::Config::speed;
-        top[FPSTR(GamesUsermod::Config::_adc_averaging_count_name)] = GamesUsermod::Config::adc_averaging_count;
-        top[FPSTR(GamesUsermod::Config::_is_left_inverted_name)] = GamesUsermod::Config::is_left_inverted;
-        top[FPSTR(GamesUsermod::Config::_is_right_inverted_name)] = GamesUsermod::Config::is_right_inverted;
-        top[FPSTR(GamesUsermod::Config::_win_count_name)] = GamesUsermod::Config::win_count;
-        top[FPSTR(GamesUsermod::Config::_pin_button_left_name)] = GamesUsermod::Config::pin_button_left;
-        top[FPSTR(GamesUsermod::Config::_pin_poti_left_name)] = GamesUsermod::Config::pin_poti_left;
-        top[FPSTR(GamesUsermod::Config::_pin_button_right_name)] = GamesUsermod::Config::pin_button_right;
-        top[FPSTR(GamesUsermod::Config::_pin_poti_right_name)] = GamesUsermod::Config::pin_poti_right;
+        ADD_TO_CONFIG(speed);
+        ADD_TO_CONFIG(speed_increment);
+        ADD_TO_CONFIG(speed_multiplier);
+        ADD_TO_CONFIG(adc_averaging_count);
+        ADD_TO_CONFIG(is_left_inverted);
+        ADD_TO_CONFIG(is_right_inverted);
+        ADD_TO_CONFIG(win_count);
+        ADD_TO_CONFIG(pin_button_left);
+        ADD_TO_CONFIG(pin_poti_left);
+        ADD_TO_CONFIG(pin_button_right);
+        ADD_TO_CONFIG(pin_poti_right);
 }
 
 bool GamesUsermod::readFromConfig(JsonObject& root)
@@ -373,15 +368,17 @@ bool GamesUsermod::readFromConfig(JsonObject& root)
         bool config_complete = Usermod::readFromConfig(root);
         JsonObject top = root[FPSTR(_name)];
 
-        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_speed_name)], GamesUsermod::Config::speed);
-        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_adc_averaging_count_name)], GamesUsermod::Config::adc_averaging_count);
-        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_is_left_inverted_name)], GamesUsermod::Config::is_left_inverted);
-        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_is_right_inverted_name)], GamesUsermod::Config::is_right_inverted);
-        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_win_count_name)], GamesUsermod::Config::win_count);
-        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_pin_button_left_name)], GamesUsermod::Config::pin_button_left);
-        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_pin_poti_left_name)], GamesUsermod::Config::pin_poti_left);
-        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_pin_button_right_name)], GamesUsermod::Config::pin_button_right);
-        config_complete &= getJsonValue(top[FPSTR(GamesUsermod::Config::_pin_poti_right_name)], GamesUsermod::Config::pin_poti_right);
+        GET_FROM_CONFIG(speed);
+        GET_FROM_CONFIG(speed_increment);
+        GET_FROM_CONFIG(speed_multiplier);
+        GET_FROM_CONFIG(adc_averaging_count);
+        GET_FROM_CONFIG(is_left_inverted);
+        GET_FROM_CONFIG(is_right_inverted);
+        GET_FROM_CONFIG(win_count);
+        GET_FROM_CONFIG(pin_button_left);
+        GET_FROM_CONFIG(pin_poti_left);
+        GET_FROM_CONFIG(pin_button_right);
+        GET_FROM_CONFIG(pin_poti_right);
 
         return config_complete;
 }
@@ -429,11 +426,20 @@ void PongGame::playStrategySetup()
         racket_right.poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
         racket_right.poti_range = 3100.0 - racket_right.poti_min;
         racket_right.is_rotation_inverted = GamesUsermod::Config::is_right_inverted;
+
+        playStrategyCurrentSpeed = GamesUsermod::Config::speed;
 }
 
 uint16_t PongGame::playStrategyLoop()
 {
         SEGMENT.fill(BLACK);
+
+        playStrategyCurrentSpeed += GamesUsermod::Config::speed_increment;
+        playStrategyCurrentSpeed *= GamesUsermod::Config::speed_multiplier;
+
+        uint8_t left_score = ball.scoreLeft;
+        uint8_t right_score = ball.scoreRight;
+        ball.speed = playStrategyCurrentSpeed;
 
         racket_right.update();
         racket_left.update();
@@ -458,6 +464,9 @@ uint16_t PongGame::playStrategyLoop()
         SEGMENT.drawCharacter(tempString[1], vW/2-2-char_width, -2, char_width, char_height, SEGCOLOR(0));
         SEGMENT.drawCharacter(tempString[2], vW/2+2, -2, char_width, char_height, SEGCOLOR(0));
         SEGMENT.drawCharacter(tempString[3], vW/2+2+char_width, -2, char_width, char_height, SEGCOLOR(0));
+
+        if (ball.scoreLeft != left_score || ball.scoreRight != right_score)
+                playStrategyCurrentSpeed = GamesUsermod::Config::speed;  // Reset speed
 
         if (ball.scoreRight >= GamesUsermod::Config::win_count) {
                 finishStrategySetup(false);
