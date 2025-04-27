@@ -121,6 +121,7 @@ public:
                 DEFINE_CONFIG_STRUCT(pin_poti_left, int8_t);
                 DEFINE_CONFIG_STRUCT(pin_button_right, int8_t);
                 DEFINE_CONFIG_STRUCT(pin_poti_right, int8_t);
+                DEFINE_CONFIG_STRUCT(is_scorer_server, bool);
         };
 
         GamesUsermod(const char *name, bool enabled):Usermod(name, enabled) {} //WLEDMM: this shouldn't be necessary (passthrough of constructor), maybe because Usermod is an abstract class
@@ -152,6 +153,7 @@ DEFINE_CONFIG_PARAM(pin_button_left, int8_t, 26);
 DEFINE_CONFIG_PARAM(pin_button_right, int8_t, 27);
 DEFINE_CONFIG_PARAM(pin_poti_left, int8_t, 34);
 DEFINE_CONFIG_PARAM(pin_poti_right, int8_t, 35);
+DEFINE_CONFIG_PARAM(is_scorer_server, bool, false);
 
 
 void PongGame::setupPins()
@@ -232,7 +234,10 @@ void PongBall::move(Item *racket_left, Item *racket_right)
                                 float randomAngle = minAngle + (maxAngle - minAngle) * randUnit;
 
                                 dir_y = sin(randomAngle);
-                                dir_x = -cos(randomAngle);
+                                if (GamesUsermod::Config::is_scorer_server)
+                                        dir_x = +cos(randomAngle);
+                                else
+                                        dir_x = -cos(randomAngle);
                                 speed -= speed;
                         }
                 } else {
@@ -250,7 +255,10 @@ void PongBall::move(Item *racket_left, Item *racket_right)
                                 float randomAngle = minAngle + (maxAngle - minAngle) * randUnit;
 
                                 dir_y = sin(randomAngle);
-                                dir_x = -cos(randomAngle);
+                                if (GamesUsermod::Config::is_scorer_server)
+                                        dir_x = -cos(randomAngle);
+                                else
+                                        dir_x = +cos(randomAngle);
 
                                 speed -= speed;
                         }
@@ -361,6 +369,7 @@ void GamesUsermod::addToConfig(JsonObject& root)
         ADD_TO_CONFIG(pin_poti_left);
         ADD_TO_CONFIG(pin_button_right);
         ADD_TO_CONFIG(pin_poti_right);
+        ADD_TO_CONFIG(is_scorer_server);
 }
 
 bool GamesUsermod::readFromConfig(JsonObject& root)
@@ -379,6 +388,7 @@ bool GamesUsermod::readFromConfig(JsonObject& root)
         GET_FROM_CONFIG(pin_poti_left);
         GET_FROM_CONFIG(pin_button_right);
         GET_FROM_CONFIG(pin_poti_right);
+        GET_FROM_CONFIG(is_scorer_server);
 
         return config_complete;
 }
