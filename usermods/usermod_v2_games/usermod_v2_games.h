@@ -491,7 +491,7 @@ uint16_t PongGame::countDownStrategyLoop()
         SEGMENT.fill(BLACK);
 
         if (SEGENV.aux0++ > (FRAMETIME/2))
-                SEGMENT.drawCharacter(tempString[0], vW/2-5, -2, 5, 8, SEGCOLOR(0));
+                SEGMENT.drawCharacter(tempString[0], vW/2-3, vH/2-4, 6, 8, SEGCOLOR(0));
 
         if (SEGENV.aux0 > FRAMETIME) {
                 SEGENV.aux1 -= 1;
