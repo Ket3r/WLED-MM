@@ -44,7 +44,6 @@ public:
         void update(Item *racket_left, Item *racket_right);
         void move(Item *racket_left, Item *racket_right);
         void draw();
-        void vec2_norm();
 };
 
 
@@ -298,17 +297,6 @@ void PongBall::draw()
 }
 
 
-void PongBall::vec2_norm()
-{
-        // sets a vectors length to 1 (which means that x + y == 1)
-        float length = sqrt((dir_x * dir_x) + (dir_y * dir_y));
-        if (length != 0.0f) {
-                length = 1.0f / length;
-                dir_x *= length;
-                dir_x *= length;
-        }
-}
-
 void Racket::update()
 {
         Item::update();
@@ -412,9 +400,8 @@ void PongGame::playStrategySetup()
         ball.height = 1;
         ball.x = vW/2;
         ball.y = vH/2;
-        ball.dir_x = -0.1;
-        ball.dir_y = 0.18;
-        ball.vec2_norm();
+        ball.dir_x = -GamesUsermod::Config::speed;
+        ball.dir_y = 0.3 * GamesUsermod::Config::speed;
         ball.min_x = 0;
         ball.min_y = 0;
         ball.max_y = vH;
