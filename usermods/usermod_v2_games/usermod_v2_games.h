@@ -44,6 +44,7 @@ public:
 
         void update(Item *racket_left, Item *racket_right);
         void move(Item *racket_left, Item *racket_right);
+        float calc_bounce(Item *racket_right, Item *racket_left);
         bool is_racket_hit(Item *racket_right, float racket_hit_y);
         void draw();
 };
@@ -280,21 +281,7 @@ void PongBall::move(Item *racket_left, Item *racket_right)
 
                 if (GamesUsermod::Config::use_bounce_zones)
                 {
-                        float zone;
-                        if (dir_x > 0)
-                                zone = y - racket_right->y;
-                        else
-                                zone = y - racket_left->y;
-                        if (zone < 1.0f)
-                                dir_y = -tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
-                        else if (zone < 2.0f)
-                                dir_y = -tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
-                        else if (zone < 3.0f)
-                                dir_y = +tan(GamesUsermod::Config::zone0_angle_rad) * abs(dir_x);
-                        else if (zone < 4.0f)
-                                dir_y = +tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
-                        else if (zone < 5.0f)
-                                dir_y = +tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
+                        dir_y = calc_bounce(racket_right, racket_left);
                 } else {
                         dir_y = dir_y;
                 }
@@ -309,6 +296,24 @@ void PongBall::move(Item *racket_left, Item *racket_right)
                 DEBUG_PRINTF("x %f y %f dir_x %f dir_y %f\n", x, y, dir_x, dir_y);
                 score();
         }
+}
+float PongBall::calc_bounce(Item *racket_right, Item *racket_left)
+{
+        float zone;
+        if (dir_x > 0)
+                zone = y - racket_right->y;
+        else
+                zone = y - racket_left->y;
+        if (zone < 1.0f)
+                return -tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
+        else if (zone < 2.0f)
+                return -tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
+        else if (zone < 3.0f)
+                return +tan(GamesUsermod::Config::zone0_angle_rad) * abs(dir_x);
+        else if (zone < 4.0f)
+                return +tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
+        else if (zone < 5.0f)
+                return +tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
 }
 bool PongBall::is_racket_hit(Item *racket, float racket_hit_y)
 {
