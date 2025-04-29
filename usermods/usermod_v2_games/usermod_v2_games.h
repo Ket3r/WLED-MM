@@ -34,6 +34,7 @@ public:
 class PongBall : public Item {
 private:
         static float calc_hit_time(uint16_t max, uint16_t min, float dir, float speed, float position);
+        void score();
 public:
         uint16_t max_x, max_y, min_x, min_y; // Playfield borders
         float dir_x;
@@ -43,6 +44,7 @@ public:
 
         void update(Item *racket_left, Item *racket_right);
         void move(Item *racket_left, Item *racket_right);
+        bool is_racket_hit(Item *racket_right, float racket_hit_y);
         void draw();
 };
 
@@ -200,6 +202,37 @@ void PongBall::update(Item *racket_left, Item *racket_right)
         }
 }
 
+void PongBall::score()
+{
+        if (dir_x > 0) {
+                scoreLeft += 1;
+                if (GamesUsermod::Config::is_scorer_server)
+                        dir_x = -1;
+                else
+                        dir_x = +1;
+        } else {
+                scoreRight += 1;
+                if (GamesUsermod::Config::is_scorer_server)
+                        dir_x = +1;
+                else
+                        dir_x = -1;
+        }
+        x = max_x / 2;
+        y = max_y / 2;
+        float minAngle = -PI / 4.0f; // -π/4
+        float maxAngle = PI / 4.0f;  // +π/4
+        // Generate a random float between 0 and 1
+        float randUnit = random(0, 10001) / 10000.0f;
+        // Scale to desired range
+        float randomAngle = minAngle + (maxAngle - minAngle) * randUnit;
+
+        dir_y = tan(randomAngle);
+        if (GamesUsermod::Config::is_scorer_server)
+                dir_x = -1;
+        else
+                dir_x = +1;
+}
+
 void PongBall::move(Item *racket_left, Item *racket_right)
 {
         // Get Time required to hit top or bottom border
@@ -208,97 +241,81 @@ void PongBall::move(Item *racket_left, Item *racket_right)
         float hit_racket_time = calc_hit_time(racket_right->x-1, racket_left->x+1, dir_x, speed, x);
 
 
-        // replace hit_x_time with racket_time if racket would be actually hit.
-        float racket_hit_y = 0;
-        if (hit_racket_time <= 1) {
-                // Racket would be hit at hight:
-                racket_hit_y = y + dir_y * speed * hit_racket_time;
-                if (dir_x > 0) {
-                        if ((racket_right->y <= racket_hit_y) && (racket_hit_y <= (racket_right->y + racket_right->height))) {
-                                hit_x_time = hit_racket_time;
-                                DEBUG_PRINT("racket_hit_y ");
-                                DEBUG_PRINTLN(racket_hit_y);
-                        } else {
-                                scoreLeft += 1;
-                                x = max_x/2;
-                                y = max_y/2;
-                                float minAngle = -PI / 4.0f; // -π/4
-                                float maxAngle = PI / 4.0f;  // +π/4
-                                // Generate a random float between 0 and 1
-                                float randUnit = random(0, 10001) / 10000.0f;
-                                // Scale to desired range
-                                float randomAngle = minAngle + (maxAngle - minAngle) * randUnit;
-
-                                dir_y = sin(randomAngle);
-                                if (GamesUsermod::Config::is_scorer_server)
-                                        dir_x = +cos(randomAngle);
-                                else
-                                        dir_x = -cos(randomAngle);
-                                speed -= speed;
-                        }
-                } else {
-                        if ((racket_left->y <= racket_hit_y) && (racket_hit_y <= (racket_left->y + racket_left->height))) {
-                                hit_x_time = hit_racket_time;
-                        } else {
-                                scoreRight += 1;
-                                x = max_x/2;
-                                y = max_y/2;
-                                float minAngle = -PI / 4.0f; // -π/4
-                                float maxAngle = PI / 4.0f;  // +π/4
-                                // Generate a random float between 0 and 1
-                                float randUnit = random(0, 10001) / 10000.0f;
-                                // Scale to desired range
-                                float randomAngle = minAngle + (maxAngle - minAngle) * randUnit;
-
-                                dir_y = sin(randomAngle);
-                                if (GamesUsermod::Config::is_scorer_server)
-                                        dir_x = -cos(randomAngle);
-                                else
-                                        dir_x = +cos(randomAngle);
-
-                                speed -= speed;
-                        }
-                }
-        }
-
-        if (hit_y_time > 1 && hit_x_time > 1) {
+        // NO hit at all
+        if (hit_y_time >= 1 && hit_x_time >= 1 && hit_racket_time >= 1) {
                 // No hits continue traveling
                 x += dir_x * speed;
                 y += dir_y * speed;
                 speed -= speed;
-        } else {
-                if (hit_y_time < hit_x_time) {
-                        x += dir_x * speed * hit_y_time;
-                        y += dir_y * speed * hit_y_time;
-                        speed *= (1 - hit_y_time);
-                        dir_y = -1.0f * dir_y;
+                return; // off we go
+        }
+
+        // Increase racket_hit_time by so much we'd rather hit the border
+        float racket_hit_y = 0;
+        if (hit_racket_time <= 1) {
+                // Check if we'd hit the racket
+                racket_hit_y = y + dir_y * speed * hit_racket_time;
+                if (dir_x > 0 && !is_racket_hit(racket_right, racket_hit_y))
+                        hit_racket_time += hit_x_time;
+                if (dir_x < 0 && !is_racket_hit(racket_left, racket_hit_y))
+                        hit_racket_time += hit_x_time;
+                DEBUG_PRINTF("racket_hit_y %f, hit_racket_time %f\n", racket_hit_y, hit_racket_time);
+        }
+
+        // TOP/BOTTOM hit
+        if (hit_y_time < hit_x_time && hit_y_time < hit_racket_time)
+        {
+                x += dir_x * speed * hit_y_time;
+                y += dir_y * speed * hit_y_time;
+                speed *= (1 - hit_y_time);
+                dir_y = -1.0f * dir_y;
+                return; // let's get outta here
+        }
+
+        // RACKET hit
+        if (hit_x_time > hit_racket_time)
+        {
+                x += dir_x * speed * hit_racket_time;
+                y = racket_hit_y;
+
+                if (GamesUsermod::Config::use_bounce_zones)
+                {
+                        float zone;
+                        if (dir_x > 0)
+                                zone = y - racket_right->y;
+                        else
+                                zone = y - racket_left->y;
+                        if (zone < 1.0f)
+                                dir_y = -tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
+                        else if (zone < 2.0f)
+                                dir_y = -tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
+                        else if (zone < 3.0f)
+                                dir_y = +tan(GamesUsermod::Config::zone0_angle_rad) * abs(dir_x);
+                        else if (zone < 4.0f)
+                                dir_y = +tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
+                        else if (zone < 5.0f)
+                                dir_y = +tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
                 } else {
-                        x += dir_x * speed * hit_x_time;
-                        y = racket_hit_y;
-
-                        if (GamesUsermod::Config::use_bounce_zones) {
-                                float zone;
-                                if (dir_x > 0)
-                                        zone = y - racket_right->y;
-                                else
-                                        zone = y - racket_left->y;
-                                if (zone < 1.0f)
-                                        dir_y = -tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
-                                else if (zone < 2.0f)
-                                        dir_y = -tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
-                                else if (zone < 3.0f)
-                                        dir_y = +tan(GamesUsermod::Config::zone0_angle_rad) * abs(dir_x);
-                                else if (zone < 4.0f)
-                                        dir_y = +tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
-                                else if (zone < 5.0f)
-                                        dir_y = +tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
-                        }
-
-                        speed *= (1 - hit_x_time);
-                        dir_x = -1.0f * dir_x;
+                        dir_y = dir_y;
                 }
+
+                speed *= (1 - hit_racket_time);
+                dir_x = -1.0f * dir_x;
+        // left/right Barrier hit
+        } else {
+                x += dir_x * speed * hit_x_time;
+                y += dir_y * speed * hit_x_time;
+                speed -= speed;
+                DEBUG_PRINTF("x %f y %f dir_x %f dir_y %f\n", x, y, dir_x, dir_y);
+                score();
         }
 }
+bool PongBall::is_racket_hit(Item *racket, float racket_hit_y)
+{
+        DEBUG_PRINTF("racket_y %f, racket_hit_y %f, racket_y+height %f\n", racket->y, racket_hit_y, (racket->y + racket->height));
+        return (racket->y <= racket_hit_y) && (racket_hit_y <= (racket->y + racket->height));
+}
+
 void PongBall::draw()
 {
         SEGMENT.setPixelColorXY((uint16_t)x, (uint16_t)y, color);
@@ -416,8 +433,8 @@ void PongGame::playStrategySetup()
         ball.height = 1;
         ball.x = vW/2;
         ball.y = vH/2;
-        ball.dir_x = -GamesUsermod::Config::speed;
-        ball.dir_y = 0.3 * GamesUsermod::Config::speed;
+        ball.dir_x = -1;
+        ball.dir_y = 0.3;
         ball.min_x = 0;
         ball.min_y = 0;
         ball.max_y = vH;
