@@ -124,6 +124,10 @@ public:
                 DEFINE_CONFIG_STRUCT(pin_button_right, int8_t);
                 DEFINE_CONFIG_STRUCT(pin_poti_right, int8_t);
                 DEFINE_CONFIG_STRUCT(is_scorer_server, bool);
+                DEFINE_CONFIG_STRUCT(use_bounce_zones, bool);
+                DEFINE_CONFIG_STRUCT(zone0_angle_rad, float);
+                DEFINE_CONFIG_STRUCT(zone1_angle_rad, float);
+                DEFINE_CONFIG_STRUCT(zone2_angle_rad, float);
         };
 
         GamesUsermod(const char *name, bool enabled):Usermod(name, enabled) {} //WLEDMM: this shouldn't be necessary (passthrough of constructor), maybe because Usermod is an abstract class
@@ -156,7 +160,10 @@ DEFINE_CONFIG_PARAM(pin_button_right, int8_t, 27);
 DEFINE_CONFIG_PARAM(pin_poti_left, int8_t, 34);
 DEFINE_CONFIG_PARAM(pin_poti_right, int8_t, 35);
 DEFINE_CONFIG_PARAM(is_scorer_server, bool, false);
-
+DEFINE_CONFIG_PARAM(use_bounce_zones, bool, true);
+DEFINE_CONFIG_PARAM(zone2_angle_rad, float, 0.785398);
+DEFINE_CONFIG_PARAM(zone1_angle_rad, float, 0.3926991);
+DEFINE_CONFIG_PARAM(zone0_angle_rad, float, 0.0);
 
 void PongGame::setupPins()
 {
@@ -183,23 +190,11 @@ float PongBall::calc_hit_time(uint16_t max, uint16_t min, float dir, float speed
 void PongBall::update(Item *racket_left, Item *racket_right)
 {
         Item::update();
-        DEBUG_PRINT("x ");
-        DEBUG_PRINTLN(x);
-        DEBUG_PRINT("y ");
-        DEBUG_PRINTLN(y);
-        DEBUG_PRINT("speed ");
-        DEBUG_PRINTLN(speed);
-        DEBUG_PRINT("dir_x ");
-        DEBUG_PRINTLN(dir_x);
-        DEBUG_PRINT("dir_y ");
-        DEBUG_PRINTLN(dir_y);
 
         int i = 0;
         while (speed > 0) {
                 move(racket_left, racket_right);
                 if (i++ > 4) {
-                        DEBUG_PRINT("Paniced @speed: ");
-                        DEBUG_PRINTLN(speed) ;
                         break;
                 }
         }
@@ -210,20 +205,19 @@ void PongBall::move(Item *racket_left, Item *racket_right)
         // Get Time required to hit top or bottom border
         float hit_y_time = calc_hit_time(max_y, min_y, dir_y, speed, y);
         float hit_x_time = calc_hit_time(max_x, min_x, dir_x, speed, x);
-        float hit_racket_time = calc_hit_time(racket_right->x, racket_left->x, dir_x, speed, x);
-        DEBUG_PRINT("hit_times: ");
-        DEBUG_PRINTLN(hit_y_time);
-        DEBUG_PRINTLN(hit_x_time);
-        DEBUG_PRINTLN(hit_racket_time);
+        float hit_racket_time = calc_hit_time(racket_right->x-1, racket_left->x+1, dir_x, speed, x);
 
 
         // replace hit_x_time with racket_time if racket would be actually hit.
+        float racket_hit_y = 0;
         if (hit_racket_time <= 1) {
                 // Racket would be hit at hight:
-                float racket_hit_y = y + dir_y * speed * hit_racket_time;
+                racket_hit_y = y + dir_y * speed * hit_racket_time;
                 if (dir_x > 0) {
                         if ((racket_right->y <= racket_hit_y) && (racket_hit_y <= (racket_right->y + racket_right->height))) {
                                 hit_x_time = hit_racket_time;
+                                DEBUG_PRINT("racket_hit_y ");
+                                DEBUG_PRINTLN(racket_hit_y);
                         } else {
                                 scoreLeft += 1;
                                 x = max_x/2;
@@ -267,27 +261,41 @@ void PongBall::move(Item *racket_left, Item *racket_right)
                 }
         }
 
-        if (hit_y_time > 1 && hit_x_time > 1 && hit_racket_time > 1) {
+        if (hit_y_time > 1 && hit_x_time > 1) {
                 // No hits continue traveling
                 x += dir_x * speed;
                 y += dir_y * speed;
                 speed -= speed;
-                DEBUG_PRINTLN("Normal travel");
         } else {
                 if (hit_y_time < hit_x_time) {
                         x += dir_x * speed * hit_y_time;
                         y += dir_y * speed * hit_y_time;
                         speed *= (1 - hit_y_time);
                         dir_y = -1.0f * dir_y;
-                        DEBUG_PRINT("New DIR_Y: ");
-                        DEBUG_PRINTLN(dir_y);
                 } else {
                         x += dir_x * speed * hit_x_time;
-                        y += dir_y * speed * hit_x_time;
+                        y = racket_hit_y;
+
+                        if (GamesUsermod::Config::use_bounce_zones) {
+                                float zone;
+                                if (dir_x > 0)
+                                        zone = y - racket_right->y;
+                                else
+                                        zone = y - racket_left->y;
+                                if (zone < 1.0f)
+                                        dir_y = -tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
+                                else if (zone < 2.0f)
+                                        dir_y = -tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
+                                else if (zone < 3.0f)
+                                        dir_y = +tan(GamesUsermod::Config::zone0_angle_rad) * abs(dir_x);
+                                else if (zone < 4.0f)
+                                        dir_y = +tan(GamesUsermod::Config::zone1_angle_rad) * abs(dir_x);
+                                else if (zone < 5.0f)
+                                        dir_y = +tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
+                        }
+
                         speed *= (1 - hit_x_time);
                         dir_x = -1.0f * dir_x;
-                        DEBUG_PRINT("New DIR_X: ");
-                        DEBUG_PRINTLN(dir_x);
                 }
         }
 }
@@ -361,6 +369,10 @@ void GamesUsermod::addToConfig(JsonObject& root)
         ADD_TO_CONFIG(pin_button_right);
         ADD_TO_CONFIG(pin_poti_right);
         ADD_TO_CONFIG(is_scorer_server);
+        ADD_TO_CONFIG(use_bounce_zones);
+        ADD_TO_CONFIG(zone0_angle_rad);
+        ADD_TO_CONFIG(zone1_angle_rad);
+        ADD_TO_CONFIG(zone2_angle_rad);
 }
 
 bool GamesUsermod::readFromConfig(JsonObject& root)
@@ -380,6 +392,10 @@ bool GamesUsermod::readFromConfig(JsonObject& root)
         GET_FROM_CONFIG(pin_button_right);
         GET_FROM_CONFIG(pin_poti_right);
         GET_FROM_CONFIG(is_scorer_server);
+        GET_FROM_CONFIG(use_bounce_zones);
+        GET_FROM_CONFIG(zone0_angle_rad);
+        GET_FROM_CONFIG(zone1_angle_rad);
+        GET_FROM_CONFIG(zone2_angle_rad);
 
         return config_complete;
 }
@@ -531,7 +547,7 @@ void Racket::setupLeft()
 {
         uint16_t vH= SEGMENT.virtualHeight();
         width = 1;
-        height = vH / 4;
+        height = 5;
         x = 0;
         y = vH/2 - height/2;
         max_y = vH - height;
@@ -545,7 +561,7 @@ void Racket::setupRight()
         uint16_t vH= SEGMENT.virtualHeight();
         uint16_t vW= SEGMENT.virtualWidth();
         width = 1;
-        height = vH/4;
+        height = 5;
         x = vW - 1;
         y = vH/2 - height/2;
         max_y = vH - height;
