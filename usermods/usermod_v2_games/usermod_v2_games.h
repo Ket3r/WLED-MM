@@ -131,6 +131,7 @@ public:
                 DEFINE_CONFIG_STRUCT(zone0_angle_rad, float);
                 DEFINE_CONFIG_STRUCT(zone1_angle_rad, float);
                 DEFINE_CONFIG_STRUCT(zone2_angle_rad, float);
+                DEFINE_CONFIG_STRUCT(use_int_collision, bool);
         };
 
         GamesUsermod(const char *name, bool enabled):Usermod(name, enabled) {} //WLEDMM: this shouldn't be necessary (passthrough of constructor), maybe because Usermod is an abstract class
@@ -167,6 +168,7 @@ DEFINE_CONFIG_PARAM(use_bounce_zones, bool, true);
 DEFINE_CONFIG_PARAM(zone2_angle_rad, float, 0.785398);
 DEFINE_CONFIG_PARAM(zone1_angle_rad, float, 0.3926991);
 DEFINE_CONFIG_PARAM(zone0_angle_rad, float, 0.0);
+DEFINE_CONFIG_PARAM(use_int_collision, bool, true);
 
 void PongGame::setupPins()
 {
@@ -300,10 +302,17 @@ void PongBall::move(Item *racket_left, Item *racket_right)
 float PongBall::calc_bounce(Item *racket_right, Item *racket_left)
 {
         float zone;
+        Item *racket;
         if (dir_x > 0)
-                zone = y - racket_right->y;
+                racket = racket_right;
         else
-                zone = y - racket_left->y;
+                racket = racket_left;
+
+        if (GamesUsermod::Config::use_int_collision)
+                zone = (int) y - (int) racket->y;
+        else
+                zone = y - racket->y;
+
         if (zone < 1.0f)
                 return -tan(GamesUsermod::Config::zone2_angle_rad) * abs(dir_x);
         else if (zone < 2.0f)
@@ -318,7 +327,10 @@ float PongBall::calc_bounce(Item *racket_right, Item *racket_left)
 bool PongBall::is_racket_hit(Item *racket, float racket_hit_y)
 {
         DEBUG_PRINTF("racket_y %f, racket_hit_y %f, racket_y+height %f\n", racket->y, racket_hit_y, (racket->y + racket->height));
-        return (racket->y <= racket_hit_y) && (racket_hit_y <= (racket->y + racket->height));
+        if (GamesUsermod::Config::use_int_collision)
+                return ((int) racket->y <= (int) racket_hit_y) && ((int) racket_hit_y <= (int) (racket->y + racket->height));
+        else
+                return (racket->y <= racket_hit_y) && (racket_hit_y <= (racket->y + racket->height));
 }
 
 void PongBall::draw()
@@ -395,6 +407,7 @@ void GamesUsermod::addToConfig(JsonObject& root)
         ADD_TO_CONFIG(zone0_angle_rad);
         ADD_TO_CONFIG(zone1_angle_rad);
         ADD_TO_CONFIG(zone2_angle_rad);
+        ADD_TO_CONFIG(use_int_collision);
 }
 
 bool GamesUsermod::readFromConfig(JsonObject& root)
@@ -418,6 +431,7 @@ bool GamesUsermod::readFromConfig(JsonObject& root)
         GET_FROM_CONFIG(zone0_angle_rad);
         GET_FROM_CONFIG(zone1_angle_rad);
         GET_FROM_CONFIG(zone2_angle_rad);
+        GET_FROM_CONFIG(use_int_collision);
 
         return config_complete;
 }
