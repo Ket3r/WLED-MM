@@ -241,10 +241,6 @@ void PongBall::score()
         float randomAngle = minAngle + (maxAngle - minAngle) * randUnit;
 
         dir_y = tan(randomAngle);
-        if (GamesUsermod::Config::is_scorer_server)
-                dir_x = -1;
-        else
-                dir_x = +1;
 }
 
 void PongBall::move(Item *racket_left, Item *racket_right)
