@@ -221,15 +221,15 @@ void PongBall::score()
         if (dir_x > 0) {
                 scoreLeft += 1;
                 if (GamesUsermod::Config::is_scorer_server)
-                        dir_x = -1;
-                else
                         dir_x = +1;
+                else
+                        dir_x = -1;
         } else {
                 scoreRight += 1;
                 if (GamesUsermod::Config::is_scorer_server)
-                        dir_x = +1;
-                else
                         dir_x = -1;
+                else
+                        dir_x = +1;
         }
         x = max_x / 2;
         y = max_y / 2;
