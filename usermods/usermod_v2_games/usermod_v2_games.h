@@ -100,6 +100,7 @@ public:
         uint16_t playStrategyLoop();
         
         void finishStrategySetup(bool is_winner_left);
+        void finishWithIDsStrategySetup(bool is_winner_left);
         uint16_t finishStrategyLoop();
 };
 
@@ -145,6 +146,7 @@ public:
                 DEFINE_CONFIG_STRUCT(zone1_angle_rad, float);
                 DEFINE_CONFIG_STRUCT(zone2_angle_rad, float);
                 DEFINE_CONFIG_STRUCT(use_int_collision, bool);
+                DEFINE_CONFIG_STRUCT(use_ids, bool);
         };
 
         GamesUsermod(const char *name, bool enabled):Usermod(name, enabled) {} //WLEDMM: this shouldn't be necessary (passthrough of constructor), maybe because Usermod is an abstract class
@@ -182,6 +184,7 @@ DEFINE_CONFIG_PARAM(zone2_angle_rad, float, 0.785398);
 DEFINE_CONFIG_PARAM(zone1_angle_rad, float, 0.3926991);
 DEFINE_CONFIG_PARAM(zone0_angle_rad, float, 0.0);
 DEFINE_CONFIG_PARAM(use_int_collision, bool, true);
+DEFINE_CONFIG_PARAM(use_ids, bool, false);
 
 void PongGame::setupPins()
 {
@@ -377,8 +380,13 @@ PongGame::PongGame(uint16_t vW, uint16_t vH) :
         this->vW = vW;
         this->vH = vH;
 
-        idSelectSetup();
-        currentStrategy = &PongGame::idSelectLoop;
+        if (GamesUsermod::Config::use_ids) {
+                idSelectSetup();
+                currentStrategy = &PongGame::idSelectLoop;
+        } else {
+                countDownStrategySetup();
+                currentStrategy = &PongGame::countDownStrategyLoop;
+        }
 
         setupPins();
 }
@@ -417,6 +425,7 @@ void GamesUsermod::addToConfig(JsonObject& root)
         ADD_TO_CONFIG(zone1_angle_rad);
         ADD_TO_CONFIG(zone2_angle_rad);
         ADD_TO_CONFIG(use_int_collision);
+        ADD_TO_CONFIG(use_ids);
 }
 
 bool GamesUsermod::readFromConfig(JsonObject& root)
@@ -441,6 +450,7 @@ bool GamesUsermod::readFromConfig(JsonObject& root)
         GET_FROM_CONFIG(zone1_angle_rad);
         GET_FROM_CONFIG(zone2_angle_rad);
         GET_FROM_CONFIG(use_int_collision);
+        GET_FROM_CONFIG(use_ids);
 
         return config_complete;
 }
@@ -516,11 +526,17 @@ uint16_t PongGame::playStrategyLoop()
                 playStrategyCurrentSpeed = GamesUsermod::Config::speed;  // Reset speed
 
         if (ball.scoreRight >= GamesUsermod::Config::win_count) {
-                finishStrategySetup(false);
+                if (GamesUsermod::Config::use_ids)
+                        finishWithIDsStrategySetup(false);
+                else
+                        finishStrategySetup(false);
                 currentStrategy = &PongGame::finishStrategyLoop;
         }
         if (ball.scoreLeft >= GamesUsermod::Config::win_count) {
-                finishStrategySetup(true);
+                if (GamesUsermod::Config::use_ids)
+                        finishWithIDsStrategySetup(true);
+                else
+                        finishStrategySetup(true);
                 currentStrategy = &PongGame::finishStrategyLoop;
         }
 
@@ -560,6 +576,21 @@ uint16_t PongGame::countDownStrategyLoop()
         racket_right.draw();
 
         return FRAMETIME;
+}
+
+
+void PongGame::finishWithIDsStrategySetup(bool is_winner_left)
+{
+        SEGMENT.fill(BLACK);
+        char line0[] = "X WINS!";
+        char line1[10] = {0};
+        if (is_winner_left)
+                line0[0] = racket_left.id;
+        else
+                line0[0] = racket_right.id;
+        
+        for (int i = 0; i < strlen(line0); i++)
+                SEGMENT.drawCharacter(line0[i], 5+5*i, 5, 5, 8, SEGCOLOR(0));
 }
 
 void PongGame::finishStrategySetup(bool is_winner_left)
