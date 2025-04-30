@@ -673,7 +673,7 @@ uint16_t PongGame::idSelectLoop()
                 {
                         char char_to_draw = 'A' + char_index_to_draw;
                         int16_t char_y = scroll_area_center_y + (i - num_visible_chars / 2) * char_height - (current_offset % char_height);
-                        if (char_y == id_select_rectangle_right.y - 1)
+                        if (char_y == id_select_rectangle_right.y + 3)
                                 SEGMENT.drawCharacter(char_to_draw, char_x, char_y-1, 6, 8, PURPLE);
                         else
                                 SEGMENT.drawCharacter(char_to_draw, char_x, char_y-1, 6, 8, SEGCOLOR(0));
