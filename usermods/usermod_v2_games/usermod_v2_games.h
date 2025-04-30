@@ -57,6 +57,7 @@ public:
         float poti_min;
         float poti_range;
         bool is_rotation_inverted;
+        char id;
 
         void update() override;
         void draw() override;
@@ -87,6 +88,7 @@ public:
         
         
         Rectangle id_select_rectangle_right;
+        Rectangle id_select_rectangle_left;
         void idSelectSetup();
         uint16_t idSelectLoop();
 
@@ -596,7 +598,8 @@ void Racket::setupLeft()
         max_y = vH - height;
         pinPoti = GamesUsermod::Config::pin_poti_left;
         poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
-        poti_range = 3100.0 - poti_min;
+        poti_range = 3000.0 - poti_min;
+        id = 0;
         is_rotation_inverted = GamesUsermod::Config::is_left_inverted;
 }
 void Racket::setupRight()
@@ -611,6 +614,7 @@ void Racket::setupRight()
         pinPoti = GamesUsermod::Config::pin_poti_right;
         poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
         poti_range = 3100.0 - poti_min;
+        id = 0;
         is_rotation_inverted = GamesUsermod::Config::is_right_inverted;
 }
 
@@ -627,72 +631,99 @@ void PongGame::idSelectSetup()
         id_select_rectangle_right.color = SEGCOLOR(0);
         id_select_rectangle_right.width = 8;
         id_select_rectangle_right.height = 10;
-        id_select_rectangle_right.x = vW/2/2 - 8/2;
+        id_select_rectangle_right.x = vW*3/4 - 8/2;
         id_select_rectangle_right.y = vH/2 - 10/2;
+
+
+        id_select_rectangle_left.color = SEGCOLOR(0);
+        id_select_rectangle_left.width = 8;
+        id_select_rectangle_left.height = 10;
+        id_select_rectangle_left.x = vW/4 - 8/2;
+        id_select_rectangle_left.y = vH/2 - 10/2;
 }
 
-uint16_t PongGame::idSelectLoop()
+static float getPotiPercentage(int16_t pin)
 {
         uint32_t total_millis = 0;
         for (int i = 0; i < GamesUsermod::Config::adc_averaging_count; i++)
         {
-                total_millis += analogReadMilliVolts(GamesUsermod::Config::pin_poti_right); // Reads the potentiometer voltage
+                total_millis += analogReadMilliVolts(pin); // Reads the potentiometer voltage
         }
         float average_voltage = (float)total_millis / GamesUsermod::Config::adc_averaging_count;
         // Assuming the potentiometer range is roughly 150mV to 3150mV (adjust if needed)
+        // TODO: Create a 150mV and 3000 mV parameter/config
         float percentage = (average_voltage - 150.0) / 3000.0;
         // Clamp the percentage to the range [0.0, 1.0]
-        percentage = constrain(percentage, 0.0, 1.0);
+        return constrain(percentage, 0.0, 1.0);
+}
 
+static char doIdSelection(uint16_t vH, uint16_t select_y, uint16_t char_x, float potiPercentage)
+{
         uint8_t char_range = 'Z' - 'A' + 1; // Total number of characters (26)
-
         int16_t char_height = 10;               // Assuming character height is 8 pixels
-        int16_t scroll_area_center_y = vH / 2; // Vertical center of the selection area
-        int16_t char_x = vW / 2 / 2 - 3;       // Horizontal position of the characters
 
         // Calculate the vertical offset based on the potentiometer percentage
-        float max_offset = char_range * char_height;
-        float current_offset_float = max_offset * percentage;
-        int16_t current_offset = static_cast<int16_t>(current_offset_float);
+        int16_t current_offset = static_cast<int16_t>(char_range * char_height * potiPercentage);
 
-        SEGMENT.fill(BLACK);
 
         // Determine the index of the character at the center of the scroll area
         int selected_char_index = current_offset / char_height;
         // Ensure the index stays within the valid range
         selected_char_index = constrain(selected_char_index, 0, char_range - 1);
-        char selected_char = 'A' + selected_char_index;
+
+        //---
 
         // Define how many characters to draw above and below the selection area
         int num_visible_chars = 5; // Adjust as needed
-
+        char selected_char = 0;
         for (int i = 0; i < num_visible_chars; ++i)
         {
                 int char_index_to_draw = selected_char_index + (i - num_visible_chars / 2);
                 if (char_index_to_draw >= 0 && char_index_to_draw < char_range)
                 {
                         char char_to_draw = 'A' + char_index_to_draw;
-                        int16_t char_y = scroll_area_center_y + (i - num_visible_chars / 2) * char_height - (current_offset % char_height);
-                        if (char_y == id_select_rectangle_right.y + 3)
+                        int16_t char_y = vH/2 + (i - num_visible_chars / 2) * char_height - (current_offset % char_height);
+                        if (char_y == select_y) {
+                                selected_char = char_to_draw;
                                 SEGMENT.drawCharacter(char_to_draw, char_x, char_y-1, 6, 8, PURPLE);
-                        else
+                        } else {
                                 SEGMENT.drawCharacter(char_to_draw, char_x, char_y-1, 6, 8, SEGCOLOR(0));
+                        }
                 }
         }
+        return selected_char;
+
+}
+
+uint16_t PongGame::idSelectLoop()
+{
+        SEGMENT.fill(BLACK);
+
+        static float percentageLeft, percentageRight;
+        if (racket_left.id == 0)
+                percentageLeft = getPotiPercentage(GamesUsermod::Config::pin_poti_left);
+        if (racket_right.id == 0)
+                percentageRight = getPotiPercentage(GamesUsermod::Config::pin_poti_right);
+
+        char leftId = doIdSelection(vH, id_select_rectangle_right.y + 3, vW/4-3, percentageLeft);
+        char rightId = doIdSelection(vH, id_select_rectangle_right.y + 3, vW*3/4-3, percentageRight);
 
         // Optionally draw a visual indicator for the selection area
         id_select_rectangle_right.draw();
+        id_select_rectangle_left.draw();
 
-        if (LOW == digitalRead(GamesUsermod::Config::pin_button_left) || LOW == digitalRead(GamesUsermod::Config::pin_button_right))
-        {
-                // Here, 'selected_char' holds the character that was in the selection area
-                // You would likely want to store this 'selected_char' and proceed.
-                Serial.print("Selected character: ");
-                Serial.println(selected_char);
+        if (LOW == digitalRead(GamesUsermod::Config::pin_button_left) && leftId != 0) {
+                racket_left.id = leftId;
+                DEBUG_PRINTF("Selected char left is '%c'\n", leftId);
+        }
+        if (LOW == digitalRead(GamesUsermod::Config::pin_button_right) && rightId != 0) {
+                racket_right.id = rightId;
+                DEBUG_PRINTF("Selected char left is '%c'\n", rightId);
+        }
+
+        if (racket_left.id != 0 && racket_right.id != 0) {
                 countDownStrategySetup();
                 currentStrategy = &PongGame::countDownStrategyLoop;
-                // Potentially return the selected character's ID or some representation of it.
-                return static_cast<uint16_t>(selected_char); // Example: return ASCII value
         }
 
         return FRAMETIME;
