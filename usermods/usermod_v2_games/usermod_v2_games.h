@@ -583,7 +583,8 @@ void PongGame::finishWithIDsStrategySetup(bool is_winner_left)
 {
         SEGMENT.fill(BLACK);
         char line0[] = "X WINS!";
-        char line1[10] = {0};
+        DEBUG_PRINTLN(line0);
+        DEBUG_PRINTF("left %c right %c\n", racket_left.id, racket_right.id);
         if (is_winner_left)
                 line0[0] = racket_left.id;
         else
@@ -630,7 +631,6 @@ void Racket::setupLeft()
         pinPoti = GamesUsermod::Config::pin_poti_left;
         poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
         poti_range = 3000.0 - poti_min;
-        id = 0;
         is_rotation_inverted = GamesUsermod::Config::is_left_inverted;
 }
 void Racket::setupRight()
@@ -645,7 +645,6 @@ void Racket::setupRight()
         pinPoti = GamesUsermod::Config::pin_poti_right;
         poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
         poti_range = 3100.0 - poti_min;
-        id = 0;
         is_rotation_inverted = GamesUsermod::Config::is_right_inverted;
 }
 
@@ -659,6 +658,9 @@ void Rectangle::draw()
 
 void PongGame::idSelectSetup()
 {
+        racket_left.id = 0;
+        racket_right.id = 0;
+
         id_select_rectangle_right.color = SEGCOLOR(0);
         id_select_rectangle_right.width = 8;
         id_select_rectangle_right.height = 10;
@@ -745,11 +747,11 @@ uint16_t PongGame::idSelectLoop()
 
         if (LOW == digitalRead(GamesUsermod::Config::pin_button_left) && leftId != 0) {
                 racket_left.id = leftId;
-                DEBUG_PRINTF("Selected char left is '%c'\n", leftId);
+                DEBUG_PRINTF("Selected char left is '%c'\n", racket_left.id);
         }
         if (LOW == digitalRead(GamesUsermod::Config::pin_button_right) && rightId != 0) {
                 racket_right.id = rightId;
-                DEBUG_PRINTF("Selected char left is '%c'\n", rightId);
+                DEBUG_PRINTF("Selected char left is '%c'\n", racket_right.id);
         }
 
         if (racket_left.id != 0 && racket_right.id != 0) {
