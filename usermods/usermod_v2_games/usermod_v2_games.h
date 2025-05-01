@@ -513,7 +513,7 @@ uint16_t PongGame::playStrategyLoop()
         }
 
         char tempString[5] = { '\0' };
-        snprintf(tempString, 5, "%2d%2d", ball.scoreRight, ball.scoreLeft);
+        snprintf(tempString, 5, "%2d%2d", ball.scoreLeft, ball.scoreRight);
 
         uint8_t char_width = 5;
         uint8_t char_height = 8;
