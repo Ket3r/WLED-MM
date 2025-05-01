@@ -614,8 +614,16 @@ void PongGame::finishStrategySetup(bool is_winner_left)
 uint16_t PongGame::finishStrategyLoop()
 {
         if (LOW == digitalRead(GamesUsermod::Config::pin_button_left) || LOW == digitalRead(GamesUsermod::Config::pin_button_right)) {
-                countDownStrategySetup();
-                currentStrategy = &PongGame::countDownStrategyLoop;
+                if (GamesUsermod::Config::use_ids)
+                {
+                        idSelectSetup();
+                        currentStrategy = &PongGame::idSelectLoop;
+                }
+                else
+                {
+                        countDownStrategySetup();
+                        currentStrategy = &PongGame::countDownStrategyLoop;
+                }
         }
         return FRAMETIME;
 }
