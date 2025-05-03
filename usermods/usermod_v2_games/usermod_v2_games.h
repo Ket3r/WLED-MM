@@ -292,6 +292,10 @@ void PongBall::move(Item *racket_left, Item *racket_right)
         {
                 x += dir_x * speed * hit_racket_time;
                 y = racket_hit_y;
+                if (dir_x > 0)
+                        color = racket_right->color;
+                else
+                        color = racket_left->color;
 
                 if (GamesUsermod::Config::use_bounce_zones)
                 {
@@ -379,6 +383,9 @@ PongGame::PongGame(uint16_t vW, uint16_t vH) :
 {
         this->vW = vW;
         this->vH = vH;
+
+        racket_left.setupLeft();
+        racket_right.setupRight();
 
         if (GamesUsermod::Config::use_ids) {
                 idSelectSetup();
@@ -484,6 +491,8 @@ void PongGame::playStrategySetup()
         racket_left.setupLeft();
         racket_right.setupRight();
 
+        ball.color = racket_right.color;
+
         playStrategyCurrentSpeed = GamesUsermod::Config::speed;
 }
 
@@ -509,7 +518,7 @@ uint16_t PongGame::playStrategyLoop()
 
 
         for (int i=0; i<vH; i+=2) {
-                SEGMENT.setPixelColorXY(vW/2, i, SEGCOLOR(0));
+                SEGMENT.setPixelColorXY(vW/2, i, SEGCOLOR(2));
         }
 
         char tempString[5] = { '\0' };
@@ -640,6 +649,7 @@ void Racket::setupLeft()
         poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
         poti_range = 3000.0 - poti_min;
         is_rotation_inverted = GamesUsermod::Config::is_left_inverted;
+        color = SEGCOLOR(0);
 }
 void Racket::setupRight()
 {
@@ -654,6 +664,7 @@ void Racket::setupRight()
         poti_min = 150.0;   // Minimalwert des Potentiometers (in mV)
         poti_range = 3100.0 - poti_min;
         is_rotation_inverted = GamesUsermod::Config::is_right_inverted;
+        color = SEGCOLOR(1);
 }
 
 void Rectangle::draw()
@@ -726,7 +737,7 @@ static char doIdSelection(uint16_t vH, uint16_t select_y, uint16_t char_x, float
                         int16_t char_y = vH/2 + (i - num_visible_chars / 2) * char_height - (current_offset % char_height);
                         if (char_y == select_y) {
                                 selected_char = char_to_draw;
-                                SEGMENT.drawCharacter(char_to_draw, char_x, char_y-1, 6, 8, PURPLE);
+                                SEGMENT.drawCharacter(char_to_draw, char_x, char_y-1, 6, 8, SEGCOLOR(1));
                         } else {
                                 SEGMENT.drawCharacter(char_to_draw, char_x, char_y-1, 6, 8, SEGCOLOR(0));
                         }
