@@ -198,7 +198,6 @@ void PongGame::setupPins()
 
 void Item::update()
 {
-        color = SEGCOLOR(0);
 }
 
 float PongBall::calc_hit_time(uint16_t max, uint16_t min, float dir, float speed, float position)
