@@ -528,10 +528,10 @@ uint16_t PongGame::playStrategyLoop()
 
         uint8_t char_width = 5;
         uint8_t char_height = 8;
-        SEGMENT.drawCharacter(tempString[0], vW/2-2-char_width-char_width, -2, char_width, char_height, SEGCOLOR(0));
-        SEGMENT.drawCharacter(tempString[1], vW/2-2-char_width, -2, char_width, char_height, SEGCOLOR(0));
-        SEGMENT.drawCharacter(tempString[2], vW/2+2, -2, char_width, char_height, SEGCOLOR(0));
-        SEGMENT.drawCharacter(tempString[3], vW/2+2+char_width, -2, char_width, char_height, SEGCOLOR(0));
+        SEGMENT.drawCharacter(tempString[0], vW/2-2-char_width-char_width, -2, char_width, char_height, racket_left.color);
+        SEGMENT.drawCharacter(tempString[1], vW/2-2-char_width, -2, char_width, char_height, racket_left.color);
+        SEGMENT.drawCharacter(tempString[2], vW/2+2, -2, char_width, char_height, racket_right.color);
+        SEGMENT.drawCharacter(tempString[3], vW/2+2+char_width, -2, char_width, char_height, racket_right.color);
 
         if (ball.scoreLeft != left_score || ball.scoreRight != right_score)
                 playStrategyCurrentSpeed = GamesUsermod::Config::speed;  // Reset speed
@@ -595,14 +595,19 @@ void PongGame::finishWithIDsStrategySetup(bool is_winner_left)
         SEGMENT.fill(BLACK);
         char line0[] = "X WINS!";
         DEBUG_PRINTLN(line0);
+
+        uint32_t win_color = SEGCOLOR(2);
         DEBUG_PRINTF("left %c right %c\n", racket_left.id, racket_right.id);
-        if (is_winner_left)
+        if (is_winner_left) {
                 line0[0] = racket_left.id;
-        else
+                win_color = racket_left.color;
+        } else {
                 line0[0] = racket_right.id;
+                win_color = racket_right.color;
+        }
         
         for (int i = 0; i < strlen(line0); i++)
-                SEGMENT.drawCharacter(line0[i], 5+5*i, 5, 5, 8, SEGCOLOR(0));
+                SEGMENT.drawCharacter(line0[i], 5+5*i, 5, 5, 8, win_color);
 }
 
 void PongGame::finishStrategySetup(bool is_winner_left)
@@ -615,10 +620,13 @@ void PongGame::finishStrategySetup(bool is_winner_left)
         else
                 strcpy(line1, "RIGHT");
         
+        uint32_t win_color = racket_right.color;
+        if (is_winner_left)
+                win_color = racket_left.color;
         for (int i = 0; i < strlen(line0); i++)
-                SEGMENT.drawCharacter(line0[i], 5+5*i, 0, 5, 8, SEGCOLOR(0));
+                SEGMENT.drawCharacter(line0[i], 5+5*i, 0, 5, 8, win_color);
         for (int i = 0; i < strlen(line1); i++)
-                SEGMENT.drawCharacter(line1[i], 5+5*i, 10, 5, 8, SEGCOLOR(0));
+                SEGMENT.drawCharacter(line1[i], 5+5*i, 10, 5, 8, win_color);
 }
 
 
