@@ -113,6 +113,9 @@ uint16_t mode_pongGame(void) {
                         SEGMENT.fill(SEGCOLOR(0));
                         return 350;
                 }
+                SEGMENT.fill(SEGCOLOR(0));
+                SEGMENT.fill(SEGCOLOR(1));
+                SEGMENT.fill(SEGCOLOR(2));
 
                 new (SEGENV.data) PongGame(SEGMENT.virtualWidth(), SEGMENT.virtualHeight());
         }
