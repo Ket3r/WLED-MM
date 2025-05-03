@@ -493,7 +493,7 @@ void PongGame::playStrategySetup()
         racket_left.setupLeft();
         racket_right.setupRight();
 
-        ball.color = racket_right.color;
+        ball.color = racket_left.color;
 
         playStrategyCurrentSpeed = GamesUsermod::Config::speed;
 }
